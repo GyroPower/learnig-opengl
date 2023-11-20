@@ -46,6 +46,7 @@
     <None Include="shaderFragment.glsl">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="lightSourceShaderFragment.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="wall.jpg">
