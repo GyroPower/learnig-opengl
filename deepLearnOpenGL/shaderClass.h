@@ -10,7 +10,7 @@
 #include<glm/gtc/type_ptr.hpp>
 
 
-class Shader {
+class properShader {
 
 public:
 	unsigned int ID;
@@ -23,7 +23,7 @@ public:
 	void setInt(const std::string& name, int value) const;
 	void setFloat(const std::string& name, float value) const;*/
 
-	Shader(const char* VertexPath, const char* fragmentPath) {
+	properShader(const char* VertexPath, const char* fragmentPath) {
 		//1. retrieve the vertex/fragment source code from filepath
 		std::string vertexCode;
 		std::string fragmentCode;
