@@ -167,6 +167,9 @@ int main() {
 	cubeShader.use();
 	cubeShader.setInt("texture1", 0);
 
+	//This simulates how it looks like two squares are selected
+	// like in a editor of a game engine of game of strategy
+
 	while (!glfwWindowShouldClose(window)) {
 		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
