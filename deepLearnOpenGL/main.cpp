@@ -5,15 +5,15 @@
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 #include<glm/gtc/type_ptr.hpp>
-#include"properModel.h"
-#include"shaderClass.h"
-#include"camera.h"
+#include"ownHeaderFiles/model/Model.h"
+#include"ownHeaderFiles/ShaderProgram/shaderClass.h"
+#include"ownHeaderFiles/camera/camera.h"
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
-//unsigned int loadTexture(const char* path);
+unsigned int loadTexture(const char* path);
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -72,14 +72,100 @@ int main() {
 	// configure global opengl state
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glEnable(GL_STENCIL_TEST);
 	
+	Shader cubeShader("shaders/stencilTest/shaderVertex.glsl", "shaders/stencilTest/shaderFragment.glsl");
 	
+	Shader shaderSingleColor("shaders/stencilTest/shaderVertex.glsl", "shaders/stencilTest/shaderFragmentSingleColor.glsl");
+
+	float cubeVertices[] = {
+		// positions          // texture Coords
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+	};
+	float planeVertices[] = {
+		// positions          // texture Coords (note we set these higher than 1 (together with GL_REPEAT as texture wrapping mode). this will cause the floor texture to repeat)
+		 5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
+		-5.0f, -0.5f,  5.0f,  0.0f, 0.0f,
+		-5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
+
+		 5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
+		-5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
+		 5.0f, -0.5f, -5.0f,  2.0f, 2.0f
+	};
+
 	
-	properShader simpleShader("shaderVertex.glsl", "shaderFragment.glsl");
+	unsigned int CubeVAO, CubeVBO;
+
+	glGenVertexArrays(1, &CubeVAO);
+	glGenBuffers(1, &CubeVBO);
+	glBindVertexArray(CubeVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, CubeVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glBindVertexArray(0);
+
+	unsigned int planeVAO, planeVBO;
+
+	glGenVertexArrays(1, &planeVAO);
+	glGenBuffers(1, &planeVBO);
+	glBindVertexArray(planeVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), &planeVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glBindVertexArray(0);
 	
-	properModel firstModel("models/backpack.obj");
-	
-	
+	unsigned int cubeTexture = loadTexture("textures/metal.jpeg");
+	unsigned int plateTexture = loadTexture("textures/wall.jpg");
+
+	cubeShader.use();
+	cubeShader.setInt("texture1", 0);
 
 	while (!glfwWindowShouldClose(window)) {
 		float currentFrame = (float)glfwGetTime();
@@ -88,32 +174,76 @@ int main() {
 
 		processInput(window);
 
-		glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		
-		simpleShader.use();
+		//if stencis test pass, it's gona replace the fragments
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		glStencilMask(0x00);//this is for the stencil buffer is not gonna save data from the floor
+		cubeShader.use();
 
-		//setting the pos of the a white cube and adding the projection and view matrixs
+		//setting the matrixs for the scene
+		glm::mat4 model = glm::mat4(1.0f);
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)800 / (float)600, 0.1f, 100.0f);
-		simpleShader.setMat4("projection", projection);
-		simpleShader.setMat4("view", view);
-
-
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f,0.0f,0.0f));
-		model = glm::scale(model, glm::vec3(1.0f));
+		cubeShader.setMat4("projection", projection);
+		cubeShader.setMat4("view", view);
 		
-		simpleShader.setMat4("model", model);
-		simpleShader.setVec3("dirLight.direction", glm::vec3(-0.1f, -1.0f, -0.3f));
-		simpleShader.setVec3("dirLight.ambient", glm::vec3(0.2f));
-		simpleShader.setVec3("dirLight.diffuse", glm::vec3(0.7f));
-		simpleShader.setVec3("dirLight.specular", glm::vec3(1.0f));
-		simpleShader.setVec3("viewPos", camera.Position);
+		//drawing the floor
+		glBindVertexArray(planeVAO);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, plateTexture);
+		model = glm::translate(model, glm::vec3(0.0f));
+		cubeShader.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
-		firstModel.Draw(simpleShader);
-			
+		//this id for the stencil test always pass and save the fragments in the buffer
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF);
+
+		glBindVertexArray(CubeVAO);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, cubeTexture);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.0f,0.0f,-1.0f));
+		cubeShader.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+		cubeShader.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		
+
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);//this is only pass when there no equal 
+		//meaning only the external parts of the cube scaled are gonna be drawn
+		glStencilMask(0x00);//and this is not to overwrite the stencil buffer
+		glDisable(GL_DEPTH_TEST);//and this if for not to do the depth test, this way
+		//we can see the 'selected' squares even behind the floor 
+		shaderSingleColor.use();//and use this to draw a square of specific color
 	
+		shaderSingleColor.setMat4("projection", projection);
+		shaderSingleColor.setMat4("view", view);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+		model = glm::scale(model, glm::vec3(1.06f));//scale a little bit to see only 
+		//the borders draw
+
+		shaderSingleColor.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(1.06f));
+
+		shaderSingleColor.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		//enable again the writing to the stencil buffer and enable the depth test
+		glStencilMask(0xFF);
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glEnable(GL_DEPTH_TEST);
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
@@ -183,4 +313,49 @@ void processInput(GLFWwindow* window) {
 	}
 
 
+}
+
+unsigned int loadTexture(const char* path) {
+	
+	unsigned int textureID;
+
+	glGenTextures(1, &textureID);
+
+	int width, height, nrComponents;
+
+	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+
+	if (data) {
+		GLenum format;
+
+		if (nrComponents == 1)
+			format = GL_RED;
+		else if (nrComponents == 3) {
+
+			format = GL_RGB;
+			std::cout << "rgb" << std::endl;
+		}
+		else if (nrComponents == 4) {
+			format = GL_RGBA;
+			std::cout << "rgba" << std::endl;
+		}
+
+		glBindTexture(GL_TEXTURE_2D, textureID);
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		stbi_image_free(data);
+	}
+	else
+	{
+		std::cout << "Texture failed to load at path: " << path << std::endl;
+		stbi_image_free(data);
+	}
+
+	return textureID;
 }

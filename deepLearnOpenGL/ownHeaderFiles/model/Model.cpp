@@ -1,15 +1,15 @@
-#include"properModel.h"
+#include"Model.h"
 
-properModel::properModel(std::string const& path, bool gamma ) {
+Model::Model(std::string const& path, bool gamma ) {
     loadModel(path);
 }
 
-void properModel::Draw(properShader& shader) {
+void Model::Draw(Shader& shader) {
     for (unsigned int i = 0; i < meshes.size(); i++)
         meshes[i].Draw(shader);
 }
 
-void properModel::loadModel(std::string const& path) {
+void Model::loadModel(std::string const& path) {
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 	// check for errors
@@ -25,7 +25,7 @@ void properModel::loadModel(std::string const& path) {
 	processNode(scene->mRootNode, scene);
 }
 
-void properModel::processNode(aiNode* node, const aiScene* scene) {
+void Model::processNode(aiNode* node, const aiScene* scene) {
 	// process each mesh located at the current node
 	for (unsigned int i = 0; i < node->mNumMeshes; i++)
 	{
@@ -42,7 +42,7 @@ void properModel::processNode(aiNode* node, const aiScene* scene) {
 
 }
 
-properMesh properModel::processMesh(aiMesh* mesh, const aiScene* scene) {
+Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     // data to fill
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -122,10 +122,10 @@ properMesh properModel::processMesh(aiMesh* mesh, const aiScene* scene) {
     textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
 
     // return a mesh object created from the extracted mesh data
-    return properMesh(vertices, indices, textures);
+    return Mesh(vertices, indices, textures);
 }
 
-std::vector<Texture> properModel::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
+std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
 {
        
     std::vector<Texture> textures;

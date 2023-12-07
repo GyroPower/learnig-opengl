@@ -1,7 +1,7 @@
-#include"properMesh.h"
+#include"Mesh.h"
 
 
-properMesh::properMesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures) {
+Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures) {
 	this->vertices = vertices;
 	this->indices = indices;
 	this->textures = textures;
@@ -10,7 +10,7 @@ properMesh::properMesh(std::vector<Vertex> vertices, std::vector<unsigned int> i
 	setupMesh();
 }
 
-void properMesh::Draw(properShader& shader) {
+void Mesh::Draw(Shader& shader) {
     // bind appropriate textures
     unsigned int diffuseNr = 1;
     unsigned int specularNr = 1;
@@ -48,7 +48,7 @@ void properMesh::Draw(properShader& shader) {
     glActiveTexture(GL_TEXTURE0);
 }
 
-void properMesh::setupMesh() {
+void Mesh::setupMesh() {
     // create buffers/arrays
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);

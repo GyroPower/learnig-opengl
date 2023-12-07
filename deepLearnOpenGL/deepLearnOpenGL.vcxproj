@@ -151,47 +151,50 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\..\source\repos\Opengl-get-started\Opengl-get-started\glad.c" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="properMesh.cpp" />
-    <ClCompile Include="properModel.cpp" />
+    <ClCompile Include="ownHeaderFiles\model\Model.cpp" />
+    <ClCompile Include="ownHeaderFiles\mesh\Mesh.cpp" />
     <ClCompile Include="stb_image.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="camera.h" />
-    <ClInclude Include="LearnOpenGLSource\Mesh.h" />
-    <ClInclude Include="LearnOpenGLSource\Model.h" />
-    <ClInclude Include="LearnOpenGLSource\Shader.h" />
-    <ClInclude Include="properMesh.h" />
-    <ClInclude Include="properModel.h" />
-    <ClInclude Include="shaderClass.h" />
+    <ClInclude Include="ownHeaderFiles\camera\camera.h" />
+    <ClInclude Include="LearnOpenGLSource\SourceCodeMesh.h" />
+    <ClInclude Include="LearnOpenGLSource\SourceCodeModel.h" />
+    <ClInclude Include="LearnOpenGLSource\SourceCodeShader.h" />
+    <ClInclude Include="ownHeaderFiles\mesh\Mesh.h" />
+    <ClInclude Include="ownHeaderFiles\model\Model.h" />
+    <ClInclude Include="ownHeaderFiles\ShaderProgram\shaderClass.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assimp-vc143-mt.dll" />
     <None Include="assimp-vc143-mtd.dll" />
-    <None Include="lightSourceShaderFragment.glsl" />
+    <None Include="shaders\DepthTest\shaderVertex.glsl" />
+    <None Include="shaders\Lighting\lightSourceShaderFragment.glsl" />
     <None Include="models\backpack.mtl" />
     <None Include="models\backpack.zip" />
-    <None Include="shaderFragment.glsl" />
-    <None Include="shaderFragmentM.glsl" />
-    <None Include="shaderVertex.glsl" />
+    <None Include="shaders\Lighting\shaderFragmentLighting.glsl" />
+    <None Include="shaders\DepthTest\shaderFragmentDepth.glsl" />
+    <None Include="shaders\Lighting\shaderVertexLighting.glsl" />
+    <None Include="shaders\stencilTest\shaderFragment.glsl" />
+    <None Include="shaders\stencilTest\shaderFragmentSingleColor.glsl" />
+    <None Include="shaders\stencilTest\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="container.jpg" />
-    <Image Include="container2.png" />
-    <Image Include="container2_specular.png" />
-    <Image Include="matrix.jpg" />
+    <Image Include="textures\container.jpg" />
+    <Image Include="textures\container2.png" />
+    <Image Include="textures\container2_specular.png" />
+    <Image Include="textures\marble.jpg" />
+    <Image Include="textures\matrix.jpg" />
     <Image Include="models\ao.jpg" />
     <Image Include="models\diffuse.jpg" />
     <Image Include="models\normal.png" />
     <Image Include="models\roughness.jpg" />
     <Image Include="models\specular.jpg" />
-    <Image Include="normal.png" />
-    <Image Include="roughness.jpg" />
-    <Image Include="wall.jpg" />
+    <Image Include="textures\metal.jpeg" />
+    <Image Include="textures\wall.jpg" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="models\source_attribution.txt" />
-    <Text Include="source_attribution.txt" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="models\backpack.obj">

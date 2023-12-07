@@ -3,7 +3,7 @@
 #include<iostream>
 #include<string>
 #include<vector>
-#include"shaderClass.h"
+#include"../ShaderProgram/shaderClass.h"
 
 #define MAX_BONE_INFLUENCE 4
 
@@ -32,7 +32,7 @@ struct Texture {
 };
 
 
-class properMesh {
+class Mesh {
 
 public:
 	std::vector<Vertex> vertices;
@@ -40,9 +40,9 @@ public:
 	std::vector<Texture> textures;
 	unsigned int VAO;
 
-    properMesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
+    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
     
-    void Draw(properShader& shader);
+    void Draw(Shader& shader);
 
 private:
 

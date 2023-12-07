@@ -5,7 +5,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "../shaderClass.h"
+#include "../LearnOpenGLSource/SourceCodeShader.h"
 
 #include <string>
 #include <vector>
@@ -36,7 +36,7 @@ struct Texture {
     string path;
 };
 
-class Mesh {
+class sMesh {
 public:
     // mesh Data
     vector<Vertex>       vertices;
@@ -45,7 +45,7 @@ public:
     unsigned int VAO;
 
     // constructor
-    Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
+    sMesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
     {
         this->vertices = vertices;
         this->indices = indices;
@@ -56,7 +56,7 @@ public:
     }
 
     // render the mesh
-    void Draw(properShader& shader)
+    void Draw(sShader& shader)
     {
         // bind appropriate textures
         unsigned int diffuseNr = 1;
