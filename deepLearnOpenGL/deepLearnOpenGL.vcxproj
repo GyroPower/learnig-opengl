@@ -79,12 +79,12 @@
     <LibraryPath>C:\Users\julian\workspace\cppSeries\AgainOpenGL\deepLearnOpenGL\deepLearnOpenGL\libraries\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\julian\workspace\cppSeries\AgainOpenGL\deepLearnOpenGL\deepLearnOpenGL\libraries\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\julian\workspace\cppSeries\AgainOpenGL\deepLearnOpenGL\deepLearnOpenGL\libraries\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)deepLearnOpenGL\libraries\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)deepLearnOpenGL\libraries\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Users\julian\workspace\cppSeries\AgainOpenGL\deepLearnOpenGL\deepLearnOpenGL\libraries\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\julian\workspace\cppSeries\AgainOpenGL\deepLearnOpenGL\deepLearnOpenGL\libraries\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)deepLearnOpenGL\libraries\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)deepLearnOpenGL\libraries\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -168,6 +168,8 @@
   <ItemGroup>
     <None Include="assimp-vc143-mt.dll" />
     <None Include="assimp-vc143-mtd.dll" />
+    <None Include="shaders\Blending\shaderFragment.glsl" />
+    <None Include="shaders\Blending\shaderVertex.glsl" />
     <None Include="shaders\DepthTest\shaderVertex.glsl" />
     <None Include="shaders\Lighting\lightSourceShaderFragment.glsl" />
     <None Include="models\backpack.mtl" />
@@ -183,6 +185,7 @@
     <Image Include="textures\container.jpg" />
     <Image Include="textures\container2.png" />
     <Image Include="textures\container2_specular.png" />
+    <Image Include="textures\grass.png" />
     <Image Include="textures\marble.jpg" />
     <Image Include="textures\matrix.jpg" />
     <Image Include="models\ao.jpg" />

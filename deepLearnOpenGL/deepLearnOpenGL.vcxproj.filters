@@ -77,6 +77,8 @@
     <None Include="shaders\stencilTest\shaderFragmentSingleColor.glsl" />
     <None Include="shaders\stencilTest\shaderVertex.glsl" />
     <None Include="shaders\stencilTest\shaderFragment.glsl" />
+    <None Include="shaders\Blending\shaderFragment.glsl" />
+    <None Include="shaders\Blending\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">
@@ -113,6 +115,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="textures\metal.jpeg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\grass.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
