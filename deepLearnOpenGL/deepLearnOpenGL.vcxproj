@@ -171,6 +171,8 @@
     <None Include="shaders\Blending\shaderFragment.glsl" />
     <None Include="shaders\Blending\shaderVertex.glsl" />
     <None Include="shaders\DepthTest\shaderVertex.glsl" />
+    <None Include="shaders\Framebuffers\shaderFragment.glsl" />
+    <None Include="shaders\Framebuffers\shaderVertex.glsl" />
     <None Include="shaders\Lighting\lightSourceShaderFragment.glsl" />
     <None Include="models\backpack.mtl" />
     <None Include="models\backpack.zip" />
@@ -182,6 +184,7 @@
     <None Include="shaders\stencilTest\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="textures\blending_transparent_window.png" />
     <Image Include="textures\container.jpg" />
     <Image Include="textures\container2.png" />
     <Image Include="textures\container2_specular.png" />
