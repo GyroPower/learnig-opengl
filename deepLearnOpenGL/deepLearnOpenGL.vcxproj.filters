@@ -81,6 +81,8 @@
     <None Include="shaders\Blending\shaderVertex.glsl" />
     <None Include="shaders\Framebuffers\shaderFragment.glsl" />
     <None Include="shaders\Framebuffers\shaderVertex.glsl" />
+    <None Include="shaders\CubeMap\shaderFragment.glsl" />
+    <None Include="shaders\CubeMap\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">
@@ -123,6 +125,24 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="textures\blending_transparent_window.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\skybox\back.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\skybox\bottom.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\skybox\front.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\skybox\left.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\skybox\right.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\skybox\top.jpg">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
