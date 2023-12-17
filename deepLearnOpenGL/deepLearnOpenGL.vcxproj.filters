@@ -83,6 +83,11 @@
     <None Include="shaders\Framebuffers\shaderVertex.glsl" />
     <None Include="shaders\CubeMap\shaderFragment.glsl" />
     <None Include="shaders\CubeMap\shaderVertex.glsl" />
+    <None Include="shaders\UniformBlocks\shaders1\shaderFragment.glsl" />
+    <None Include="shaders\UniformBlocks\shaders1\shaderVertex.glsl" />
+    <None Include="shaders\UniformBlocks\shaders2\shaderFragment.glsl" />
+    <None Include="shaders\UniformBlocks\shaders3\shaderFragment.glsl" />
+    <None Include="shaders\UniformBlocks\shaders4\shaderFragment.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">

@@ -81,20 +81,17 @@ int main() {
 	glEnable(GL_DEPTH_TEST);
 	
 
-	Shader shaderNormal("shaders/DepthTest/shaderVertex.glsl", "shaders/DepthTest/shaderFragmentDepth.glsl");
+	Shader shaderQuad1("shaders/UniformBlocks/shaders1/shaderVertex.glsl", "shaders/UniformBlocks/shaders1/shaderFragment.glsl");
 	
+	Shader shaderQuad2("shaders/UniformBlocks/shaders1/shaderVertex.glsl", "shaders/UniformBlocks/shaders2/shaderFragment.glsl");
+	
+	Shader shaderQuad3("shaders/UniformBlocks/shaders1/shaderVertex.glsl", "shaders/UniformBlocks/shaders3/shaderFragment.glsl");
+
+	Shader shaderQuad4("shaders/UniformBlocks/shaders1/shaderVertex.glsl", "shaders/UniformBlocks/shaders4/shaderFragment.glsl");
+
 	Shader shaderSkybox("shaders/CubeMap/shaderVertex.glsl", "shaders/CubeMap/shaderFragment.glsl");
 	
-	//this is a little quad up screen, simulating a car mirror
-	float quad[] = {
-		-0.3f,  1.0f,  0.0f, 1.0f,
-		-0.3f,  0.7f,  0.0f, 0.0f,
-		 0.3f,  0.7f,  1.0f, 0.0f,
-
-		-0.3f,  1.0f,  0.0f, 1.0f,
-		 0.3f,  0.7f,  1.0f, 0.0f,
-		 0.3f,  1.0f,  1.0f, 1.0f
-	};
+	
 
 	float cubeVertices[] = {
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -139,27 +136,7 @@ int main() {
 		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
 		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 	};
-	float planeVertices[] = {
-		// positions          // texture Coords (note we set these higher than 1 (together with GL_REPEAT as texture wrapping mode). this will cause the floor texture to repeat)
-		 5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
-		-5.0f, -0.5f,  5.0f,  0.0f, 0.0f,
-		-5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
 
-		 5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
-		-5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
-		 5.0f, -0.5f, -5.0f,  2.0f, 2.0f
-	};
-	
-	float transparentVertices[] = {
-		// positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
-		0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-		0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
-		1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-
-		0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-		1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-		1.0f,  0.5f,  0.0f,  1.0f,  0.0f
-	};
 
 	float skyboxVertices[] = {
 		// positions          
@@ -219,7 +196,7 @@ int main() {
 	unsigned int cubemapTextureSkyBox = genCubeMap(faces);
 
 	unsigned int skyboxVAO, skyboxVBO;
-
+	//setting the data of how the skybox should be displayed
 	glGenVertexArrays(1, &skyboxVAO);
 	glGenBuffers(1, &skyboxVBO);
 	glBindVertexArray(skyboxVAO);
@@ -243,70 +220,40 @@ int main() {
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 	glBindVertexArray(0);
 
-	unsigned int planeVAO, planeVBO;
+	//creating uniformBlocks for a differents shaders programs
+	//This is for identify that differents shaders programs shares the same uniforms
+	unsigned int uniformBlockIndex1 = glGetUniformBlockIndex(shaderQuad1.ID, "Matrices");
+	unsigned int uniformBlockIndex2 = glGetUniformBlockIndex(shaderQuad2.ID, "Matrices");
+	unsigned int uniformBlockIndex3 = glGetUniformBlockIndex(shaderQuad3.ID, "Matrices");
+	unsigned int uniformBlockIndex4 = glGetUniformBlockIndex(shaderQuad4.ID, "Matrices");
 
-	glGenVertexArrays(1, &planeVAO);
-	glGenBuffers(1, &planeVBO);
-	glBindVertexArray(planeVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), &planeVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glBindVertexArray(0);
-	
-	//this quad is the quad where are rendered the scene in the framebuffer we create
-	unsigned int quadVAO, quadVBO;
-	glGenVertexArrays(1, &quadVAO);
-	glGenBuffers(1, &quadVBO);
-	glBindVertexArray(quadVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, quadVAO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-	glBindVertexArray(0);
-	
-	unsigned int cubeTexture = loadTexture("textures/container.jpg");
-	unsigned int planeTexture = loadTexture("textures/wall.jpg");
+	//Binding this uniforms in the same Index of shared memory for the shaders
+	glUniformBlockBinding(shaderQuad1.ID, uniformBlockIndex1, 0);
+	glUniformBlockBinding(shaderQuad2.ID, uniformBlockIndex2, 0);
+	glUniformBlockBinding(shaderQuad3.ID, uniformBlockIndex3, 0);
+	glUniformBlockBinding(shaderQuad4.ID, uniformBlockIndex4, 0);
 
+	//This is the uniform buffer object that contains the shared data for the shaders
+	unsigned int uboMatrices;
+
+	glGenBuffers(1, &uboMatrices);
+	glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof(glm::mat4));
 	
+	//adding the actual data in the buffer, allocating the data in the order of assigment
+	//in the uniformBlock declaration in the shaders programs
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.f);
+	glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projection));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
 	shaderSkybox.use();
 	shaderSkybox.setInt("skybox", 0);
 
-	//frame buffer to render a scene and use in a the default framebuffer for make
-	//post processing effects
-	unsigned int framebuffer;
-	glGenFramebuffers(1, &framebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-
-	//Binding a texture to paint to it and render
-	unsigned int textureColorBuffer;
 	
-	glGenTextures(1, &textureColorBuffer);
-	glBindTexture(GL_TEXTURE_2D, textureColorBuffer);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBuffer, 0);
-
-	
-	//creating a rener buffer for do depth and stencil test
-	unsigned int rbo;
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
-
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
 
 	while (!glfwWindowShouldClose(window)) {
 		float currentFrame = (float)glfwGetTime();
@@ -322,26 +269,43 @@ int main() {
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		
+		//Assign the view matrix 
 		glm::mat4 view = camera.GetViewMatrix();
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(view));
+		
+		//And there we only need to set manually for each shaderProgram the model uniform
 		glm::mat4 model(1.0f);
 		model = glm::translate(model, glm::vec3(5.0f, 0.0f, 0.0f));
 		
-		shaderNormal.use();
-		shaderNormal.setMat4("view", view);
-		shaderNormal.setMat4("projection", projection);
-		shaderNormal.setMat4("model", model);
+		shaderQuad1.use();
+		shaderQuad1.setMat4("model", model);
 
-		shaderNormal.setVec3("cameraPos", camera.Position);
-		shaderNormal.setInt("skybox", 0);
 		glBindVertexArray(CubeVAO);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureSkyBox);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
+		
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(1.0f, -6.0f, 0.0f));
+		shaderQuad2.use();
+		shaderQuad2.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 2.0f, 0.0));
+		shaderQuad3.use();
+		shaderQuad3.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 10.0f, 0.0f));
+		shaderQuad4.use();
+		shaderQuad4.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
 
 		view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+		//the skybox only is rendered if the pixels are full deeper in the scene
+		//and how the fragmentshader of the skybox works, it would be the case almost always
 		glDepthFunc(GL_LEQUAL);
 
 		shaderSkybox.use();
@@ -362,15 +326,9 @@ int main() {
 	}
 
 	glDeleteVertexArrays(1, &CubeVAO);
-	glDeleteVertexArrays(1, &planeVAO);
-	glDeleteVertexArrays(1, &quadVAO);
 	glDeleteVertexArrays(1, &skyboxVAO);
 	glDeleteBuffers(1, &CubeVBO);
-	glDeleteBuffers(1, &planeVBO);
-	glDeleteBuffers(1, &quadVBO);
 	glDeleteBuffers(1, &skyboxVBO);
-	glDeleteRenderbuffers(1, &rbo);
-	glDeleteFramebuffers(1, &framebuffer);
 
 	glfwTerminate();
 
