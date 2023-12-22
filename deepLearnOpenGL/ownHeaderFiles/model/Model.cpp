@@ -1,6 +1,6 @@
 #include"Model.h"
 
-Model::Model(std::string const& path, bool gamma ) {
+Model::Model(std::string const& path, bool gamma ): gamma(gamma) {
     loadModel(path);
 }
 
@@ -19,7 +19,7 @@ void Model::loadModel(std::string const& path) {
 		return;
 	}
 	// retrieve the directory path of the filepath
-	directory = path.substr(0, path.find_last_of('/'));
+	this->directory = path.substr(0, path.find_last_of('/'));
 
 	// process ASSIMP's root node recursively
 	processNode(scene->mRootNode, scene);

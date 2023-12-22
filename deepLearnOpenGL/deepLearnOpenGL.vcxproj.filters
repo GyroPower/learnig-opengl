@@ -88,6 +88,12 @@
     <None Include="shaders\UniformBlocks\shaders2\shaderFragment.glsl" />
     <None Include="shaders\UniformBlocks\shaders3\shaderFragment.glsl" />
     <None Include="shaders\UniformBlocks\shaders4\shaderFragment.glsl" />
+    <None Include="shaders\GeometryShader\shaderFragment.glsl" />
+    <None Include="shaders\GeometryShader\shaderGeometry.glsl" />
+    <None Include="shaders\GeometryShader\shaderVertex.glsl" />
+    <None Include="shaders\3DmodelLoadSimple\shaderFragment.glsl" />
+    <None Include="shaders\3DmodelLoadSimple\shaderGeometry.glsl" />
+    <None Include="shaders\3DmodelLoadSimple\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">

@@ -168,6 +168,9 @@
   <ItemGroup>
     <None Include="assimp-vc143-mt.dll" />
     <None Include="assimp-vc143-mtd.dll" />
+    <None Include="shaders\3DmodelLoadSimple\shaderFragment.glsl" />
+    <None Include="shaders\3DmodelLoadSimple\shaderGeometry.glsl" />
+    <None Include="shaders\3DmodelLoadSimple\shaderVertex.glsl" />
     <None Include="shaders\Blending\shaderFragment.glsl" />
     <None Include="shaders\Blending\shaderVertex.glsl" />
     <None Include="shaders\CubeMap\shaderFragment.glsl" />
@@ -175,6 +178,9 @@
     <None Include="shaders\DepthTest\shaderVertex.glsl" />
     <None Include="shaders\Framebuffers\shaderFragment.glsl" />
     <None Include="shaders\Framebuffers\shaderVertex.glsl" />
+    <None Include="shaders\GeometryShader\shaderFragment.glsl" />
+    <None Include="shaders\GeometryShader\shaderGeometry.glsl" />
+    <None Include="shaders\GeometryShader\shaderVertex.glsl" />
     <None Include="shaders\Lighting\lightSourceShaderFragment.glsl" />
     <None Include="models\backpack.mtl" />
     <None Include="models\backpack.zip" />

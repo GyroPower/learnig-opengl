@@ -6,9 +6,9 @@
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 #include<glm/gtc/type_ptr.hpp>
-#include"ownHeaderFiles/model/Model.h"
-#include"ownHeaderFiles/ShaderProgram/shaderClass.h"
-#include"ownHeaderFiles/camera/camera.h"
+#include"OwnHeaderFiles/ShaderProgram/shaderClass.h"
+#include"OwnHeaderFiles/model/Model.h"
+#include"OwnHeaderFiles/camera/camera.h"
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
@@ -81,178 +81,18 @@ int main() {
 	glEnable(GL_DEPTH_TEST);
 	
 
-	Shader shaderQuad1("shaders/UniformBlocks/shaders1/shaderVertex.glsl", "shaders/UniformBlocks/shaders1/shaderFragment.glsl");
-	
-	Shader shaderQuad2("shaders/UniformBlocks/shaders1/shaderVertex.glsl", "shaders/UniformBlocks/shaders2/shaderFragment.glsl");
-	
-	Shader shaderQuad3("shaders/UniformBlocks/shaders1/shaderVertex.glsl", "shaders/UniformBlocks/shaders3/shaderFragment.glsl");
-
-	Shader shaderQuad4("shaders/UniformBlocks/shaders1/shaderVertex.glsl", "shaders/UniformBlocks/shaders4/shaderFragment.glsl");
-
-	Shader shaderSkybox("shaders/CubeMap/shaderVertex.glsl", "shaders/CubeMap/shaderFragment.glsl");
-	
-	
-
-	float cubeVertices[] = {
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-
-		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-		0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+	float points[] = {
+		-0.5f,  0.5f, 1.0f, 0.0f, 0.0f, // top-left
+		 0.5f,  0.5f, 0.0f, 1.0f, 0.0f, // top-right
+		 0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // bottom-right
+		-0.5f, -0.5f, 1.0f, 1.0f, 0.0f  // bottom-left
 	};
-
-
-	float skyboxVertices[] = {
-		// positions          
-		-1.0f,  1.0f, -1.0f,
-		-1.0f, -1.0f, -1.0f,
-		 1.0f, -1.0f, -1.0f,
-		 1.0f, -1.0f, -1.0f,
-		 1.0f,  1.0f, -1.0f,
-		-1.0f,  1.0f, -1.0f,
-
-		-1.0f, -1.0f,  1.0f,
-		-1.0f, -1.0f, -1.0f,
-		-1.0f,  1.0f, -1.0f,
-		-1.0f,  1.0f, -1.0f,
-		-1.0f,  1.0f,  1.0f,
-		-1.0f, -1.0f,  1.0f,
-
-		 1.0f, -1.0f, -1.0f,
-		 1.0f, -1.0f,  1.0f,
-		 1.0f,  1.0f,  1.0f,
-		 1.0f,  1.0f,  1.0f,
-		 1.0f,  1.0f, -1.0f,
-		 1.0f, -1.0f, -1.0f,
-
-		-1.0f, -1.0f,  1.0f,
-		-1.0f,  1.0f,  1.0f,
-		 1.0f,  1.0f,  1.0f,
-		 1.0f,  1.0f,  1.0f,
-		 1.0f, -1.0f,  1.0f,
-		-1.0f, -1.0f,  1.0f,
-
-		-1.0f,  1.0f, -1.0f,
-		 1.0f,  1.0f, -1.0f,
-		 1.0f,  1.0f,  1.0f,
-		 1.0f,  1.0f,  1.0f,
-		-1.0f,  1.0f,  1.0f,
-		-1.0f,  1.0f, -1.0f,
-
-		-1.0f, -1.0f, -1.0f,
-		-1.0f, -1.0f,  1.0f,
-		 1.0f, -1.0f, -1.0f,
-		 1.0f, -1.0f, -1.0f,
-		-1.0f, -1.0f,  1.0f,
-		 1.0f, -1.0f,  1.0f
-	};
-
-	std::vector<std::string> faces{
-		"skybox/right.jpg",
-		"skybox/left.jpg",
-		"skybox/top.jpg",
-		"skybox/bottom.jpg",
-		"skybox/front.jpg",
-		"skybox/back.jpg"
-	};
-
-	//generating a cubemap texture for a skybox
-	unsigned int cubemapTextureSkyBox = genCubeMap(faces);
-
-	unsigned int skyboxVAO, skyboxVBO;
-	//setting the data of how the skybox should be displayed
-	glGenVertexArrays(1, &skyboxVAO);
-	glGenBuffers(1, &skyboxVBO);
-	glBindVertexArray(skyboxVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glBindVertexArray(0);
-
-
-	unsigned int CubeVAO, CubeVBO;
-
-	glGenVertexArrays(1, &CubeVAO);
-	glGenBuffers(1, &CubeVBO);
-	glBindVertexArray(CubeVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, CubeVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-	glBindVertexArray(0);
-
-	//creating uniformBlocks for a differents shaders programs
-	//This is for identify that differents shaders programs shares the same uniforms
-	unsigned int uniformBlockIndex1 = glGetUniformBlockIndex(shaderQuad1.ID, "Matrices");
-	unsigned int uniformBlockIndex2 = glGetUniformBlockIndex(shaderQuad2.ID, "Matrices");
-	unsigned int uniformBlockIndex3 = glGetUniformBlockIndex(shaderQuad3.ID, "Matrices");
-	unsigned int uniformBlockIndex4 = glGetUniformBlockIndex(shaderQuad4.ID, "Matrices");
-
-	//Binding this uniforms in the same Index of shared memory for the shaders
-	glUniformBlockBinding(shaderQuad1.ID, uniformBlockIndex1, 0);
-	glUniformBlockBinding(shaderQuad2.ID, uniformBlockIndex2, 0);
-	glUniformBlockBinding(shaderQuad3.ID, uniformBlockIndex3, 0);
-	glUniformBlockBinding(shaderQuad4.ID, uniformBlockIndex4, 0);
-
-	//This is the uniform buffer object that contains the shared data for the shaders
-	unsigned int uboMatrices;
-
-	glGenBuffers(1, &uboMatrices);
-	glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
-	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-	glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof(glm::mat4));
 	
-	//adding the actual data in the buffer, allocating the data in the order of assigment
-	//in the uniformBlock declaration in the shaders programs
-	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.f);
-	glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projection));
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	Shader shaderLoad3DModel("shaders/3DmodelLoadSimple/shaderVertex.glsl", "shaders/3DmodelLoadSimple/shaderFragment.glsl");
 
-	shaderSkybox.use();
-	shaderSkybox.setInt("skybox", 0);
+	Shader shaderShowNormals("shaders/GeometryShader/shaderVertex.glsl", "shaders/GeometryShader/shaderFragment.glsl", "shaders/GeometryShader/shaderGeometry.glsl");
 
+	Model backPackModel("models/backpack/backpack.obj");
 	
 
 	while (!glfwWindowShouldClose(window)) {
@@ -262,74 +102,33 @@ int main() {
 
 		processInput(window);
 
-		//glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-		//glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
-
-		// make sure we clear the framebuffer's content
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		shaderLoad3DModel.use();
 		
-		//Assign the view matrix 
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
-		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(view));
+		shaderLoad3DModel.setMat4("view", view);
+		shaderLoad3DModel.setMat4("projection", projection);
 		
-		//And there we only need to set manually for each shaderProgram the model uniform
 		glm::mat4 model(1.0f);
-		model = glm::translate(model, glm::vec3(5.0f, 0.0f, 0.0f));
+		shaderLoad3DModel.setMat4("model", model);
+
+		backPackModel.Draw(shaderLoad3DModel);
+
+		shaderShowNormals.use();
+		shaderShowNormals.setMat4("view", view);
+		shaderShowNormals.setMat4("model", model);
+		shaderShowNormals.setMat4("projection", projection);
+		backPackModel.Draw(shaderShowNormals);
 		
-		shaderQuad1.use();
-		shaderQuad1.setMat4("model", model);
-
-		glBindVertexArray(CubeVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(1.0f, -6.0f, 0.0f));
-		shaderQuad2.use();
-		shaderQuad2.setMat4("model", model);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 2.0f, 0.0));
-		shaderQuad3.use();
-		shaderQuad3.setMat4("model", model);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 10.0f, 0.0f));
-		shaderQuad4.use();
-		shaderQuad4.setMat4("model", model);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-		view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
-		//the skybox only is rendered if the pixels are full deeper in the scene
-		//and how the fragmentshader of the skybox works, it would be the case almost always
-		glDepthFunc(GL_LEQUAL);
-
-		shaderSkybox.use();
-		shaderSkybox.setMat4("view", view);
-		shaderSkybox.setMat4("projection", projection);
-
-		glBindVertexArray(skyboxVAO);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureSkyBox);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
-		glDepthFunc(GL_LESS);
-		// This is where we render the little quad of the scene
 		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
 	}
 
-	glDeleteVertexArrays(1, &CubeVAO);
-	glDeleteVertexArrays(1, &skyboxVAO);
-	glDeleteBuffers(1, &CubeVBO);
-	glDeleteBuffers(1, &skyboxVBO);
-
+	
 	glfwTerminate();
 
 	return 0;

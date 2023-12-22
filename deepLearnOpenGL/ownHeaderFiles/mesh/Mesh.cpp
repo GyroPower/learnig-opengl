@@ -32,9 +32,7 @@ void Mesh::Draw(Shader& shader) {
             number = std::to_string(heightNr++); // transfer unsigned int to string
 
         // now set the sampler to the correct texture unit
-        shader.setInt("material." + name + number, i);
-        shader.setFloat("material.shininess", 32.0f);
-        //glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
+        glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
         // and finally bind the texture
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
     }

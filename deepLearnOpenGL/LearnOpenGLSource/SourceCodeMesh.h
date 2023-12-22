@@ -73,11 +73,11 @@ public:
                 number = std::to_string(diffuseNr++);
             else if (name == "texture_specular")
                 number = std::to_string(specularNr++); // transfer unsigned int to string
-            else if (name == "texture_normal")
-                number = std::to_string(normalNr++); // transfer unsigned int to string
-            else if (name == "texture_height")
-                number = std::to_string(heightNr++); // transfer unsigned int to string
-
+            //else if (name == "texture_normal")
+            //    number = std::to_string(normalNr++); // transfer unsigned int to string
+            //else if (name == "texture_height")
+            //    number = std::to_string(heightNr++); // transfer unsigned int to string
+            std::cout << name << std::endl;
             // now set the sampler to the correct texture unit
             glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
             // and finally bind the texture
@@ -129,10 +129,10 @@ private:
         // vertex tangent
         glEnableVertexAttribArray(3);
         glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
-        // vertex bitangent
+        //// vertex bitangent
         glEnableVertexAttribArray(4);
         glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
-        // ids
+        //// ids
         glEnableVertexAttribArray(5);
         glVertexAttribIPointer(5, 4, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, m_BoneIDs));
 
