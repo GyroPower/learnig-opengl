@@ -181,6 +181,10 @@
     <None Include="shaders\GeometryShader\shaderFragment.glsl" />
     <None Include="shaders\GeometryShader\shaderGeometry.glsl" />
     <None Include="shaders\GeometryShader\shaderVertex.glsl" />
+    <None Include="shaders\Instancing\PlanetAndAsteroidsExample\shaderFragment.glsl" />
+    <None Include="shaders\Instancing\PlanetAndAsteroidsExample\shaderVertex.glsl" />
+    <None Include="shaders\Instancing\SimpleExample\shaderFragment.glsl" />
+    <None Include="shaders\Instancing\SimpleExample\shaderVertex.glsl" />
     <None Include="shaders\Lighting\lightSourceShaderFragment.glsl" />
     <None Include="models\backpack.mtl" />
     <None Include="models\backpack.zip" />

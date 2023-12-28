@@ -94,6 +94,10 @@
     <None Include="shaders\3DmodelLoadSimple\shaderFragment.glsl" />
     <None Include="shaders\3DmodelLoadSimple\shaderGeometry.glsl" />
     <None Include="shaders\3DmodelLoadSimple\shaderVertex.glsl" />
+    <None Include="shaders\Instancing\SimpleExample\shaderFragment.glsl" />
+    <None Include="shaders\Instancing\SimpleExample\shaderVertex.glsl" />
+    <None Include="shaders\Instancing\PlanetAndAsteroidsExample\shaderFragment.glsl" />
+    <None Include="shaders\Instancing\PlanetAndAsteroidsExample\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">

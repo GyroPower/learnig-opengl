@@ -44,6 +44,7 @@ int main() {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	
 
 #ifdef __APPLE__
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -81,19 +82,85 @@ int main() {
 	glEnable(GL_DEPTH_TEST);
 	
 
-	float points[] = {
-		-0.5f,  0.5f, 1.0f, 0.0f, 0.0f, // top-left
-		 0.5f,  0.5f, 0.0f, 1.0f, 0.0f, // top-right
-		 0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // bottom-right
-		-0.5f, -0.5f, 1.0f, 1.0f, 0.0f  // bottom-left
+
+	float quadVertices[] = {
+		// positions     // colors
+		-0.05f,  0.05f,  1.0f, 0.0f, 0.0f,
+		 0.05f, -0.05f,  0.0f, 1.0f, 0.0f,
+		-0.05f, -0.05f,  0.0f, 0.0f, 1.0f,
+
+		-0.05f,  0.05f,  1.0f, 0.0f, 0.0f,
+		 0.05f, -0.05f,  0.0f, 1.0f, 0.0f,
+		 0.05f,  0.05f,  0.0f, 1.0f, 1.0f
 	};
-	
-	Shader shaderLoad3DModel("shaders/3DmodelLoadSimple/shaderVertex.glsl", "shaders/3DmodelLoadSimple/shaderFragment.glsl");
 
-	Shader shaderShowNormals("shaders/GeometryShader/shaderVertex.glsl", "shaders/GeometryShader/shaderFragment.glsl", "shaders/GeometryShader/shaderGeometry.glsl");
-
-	Model backPackModel("models/backpack/backpack.obj");
 	
+	Shader shaderInstancing("shaders/Instancing/PlanetAndAsteroidsExample/shaderVertex.glsl", "shaders/Instancing/PlanetAndAsteroidsExample/shaderFragment.glsl");
+	Shader shaderPlanet("shaders/3DmodelLoadSimple/shaderVertex.glsl", "shaders/3DmodelLoadSimple/shaderFragment.glsl");
+
+	Model planetModel("models/planet/planet.obj");
+	
+	Model asteroidModel("models/asteroid/rock.obj");
+
+	
+
+	unsigned int amount = 50000;
+
+	glm::mat4* modelMatrices;
+	modelMatrices = new glm::mat4[amount];
+	srand(glfwGetTime());
+	float radius = 70.0f;
+	float offset = 15.0f;
+
+	//Giving locations for all the asteroids
+	for (unsigned int i = 0; i < amount; i++) {
+		glm::mat4 model(1.0f);
+
+		float angle = (float)i / (float)amount * 360.0f;
+		float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+		float x = sin(angle) * radius + displacement;
+		displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+		float y = displacement * 0.4f;
+		displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+		float z = cos(angle) * radius + displacement;
+		model = glm::translate(model, glm::vec3(x, y, z));
+
+		float scale = (rand() % 20) / 100.0f + 0.05f;
+		model = glm::scale(model, glm::vec3(scale));
+
+		float rotAngle = (rand() % 360);
+		model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
+
+		modelMatrices[i] = model;
+	}
+
+	//Giving the actual data to a buffer
+	unsigned int buffer;
+	glGenBuffers(1, &buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, buffer);
+	glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
+
+	//setting how to read the matrix data and tell it to read the data per instance of the model
+	for (unsigned int i = 0; i < asteroidModel.meshes.size(); i++) {
+		unsigned int VAO = asteroidModel.meshes[i].VAO;
+		glBindVertexArray(VAO);
+
+		glEnableVertexAttribArray(3);
+		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)0);
+		glEnableVertexAttribArray(4);
+		glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)(1 * sizeof(glm::vec4)));
+		glEnableVertexAttribArray(5);
+		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)(2 * sizeof(glm::vec4)));
+		glEnableVertexAttribArray(6);
+		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)(3 * sizeof(glm::vec4)));
+
+		glVertexAttribDivisor(3, 1);
+		glVertexAttribDivisor(4, 1);
+		glVertexAttribDivisor(5, 1);
+		glVertexAttribDivisor(6, 1);
+
+		glBindVertexArray(0);
+	}
 
 	while (!glfwWindowShouldClose(window)) {
 		float currentFrame = (float)glfwGetTime();
@@ -104,25 +171,36 @@ int main() {
 
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		shaderLoad3DModel.use();
 		
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		
+		shaderPlanet.use();
 		glm::mat4 view = camera.GetViewMatrix();
-		shaderLoad3DModel.setMat4("view", view);
-		shaderLoad3DModel.setMat4("projection", projection);
-		
-		glm::mat4 model(1.0f);
-		shaderLoad3DModel.setMat4("model", model);
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, -3.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(4.0f));
 
-		backPackModel.Draw(shaderLoad3DModel);
+		shaderPlanet.setMat4("view", view);
+		shaderPlanet.setMat4("projection", projection);
+		shaderPlanet.setMat4("model", model);
+		planetModel.Draw(shaderPlanet);
 
-		shaderShowNormals.use();
-		shaderShowNormals.setMat4("view", view);
-		shaderShowNormals.setMat4("model", model);
-		shaderShowNormals.setMat4("projection", projection);
-		backPackModel.Draw(shaderShowNormals);
-		
-		
+
+		shaderInstancing.use();
+		shaderInstancing.setMat4("view", view);
+		shaderInstancing.setMat4("projection", projection);
+		shaderInstancing.setInt("texture_diffuse1", 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, asteroidModel.textures_loaded[0].id);
+		// Draw al the meshes and using draw arrays instaced to draw all the instances we need
+
+		for (unsigned int i = 0; i < asteroidModel.meshes.size(); i++) {
+			glBindVertexArray(asteroidModel.meshes[i].VAO);
+			glDrawElementsInstanced(
+				GL_TRIANGLES, asteroidModel.meshes[i].indices.size(), GL_UNSIGNED_INT, 0, amount
+			);
+		}
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
@@ -130,6 +208,8 @@ int main() {
 
 	
 	glfwTerminate();
+
+	delete[] modelMatrices;
 
 	return 0;
 
