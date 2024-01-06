@@ -171,6 +171,8 @@
     <None Include="shaders\3DmodelLoadSimple\shaderFragment.glsl" />
     <None Include="shaders\3DmodelLoadSimple\shaderGeometry.glsl" />
     <None Include="shaders\3DmodelLoadSimple\shaderVertex.glsl" />
+    <None Include="shaders\advanceLighting\Blinn-Phong\shaderFragment.glsl" />
+    <None Include="shaders\advanceLighting\Blinn-Phong\shaderVertex.glsl" />
     <None Include="shaders\Blending\shaderFragment.glsl" />
     <None Include="shaders\Blending\shaderVertex.glsl" />
     <None Include="shaders\CubeMap\shaderFragment.glsl" />
@@ -191,6 +193,8 @@
     <None Include="shaders\Lighting\shaderFragmentLighting.glsl" />
     <None Include="shaders\DepthTest\shaderFragmentDepth.glsl" />
     <None Include="shaders\Lighting\shaderVertexLighting.glsl" />
+    <None Include="shaders\SimpleShader\shaderFragment.glsl" />
+    <None Include="shaders\SimpleShader\shaderVertex.glsl" />
     <None Include="shaders\stencilTest\shaderFragment.glsl" />
     <None Include="shaders\stencilTest\shaderFragmentSingleColor.glsl" />
     <None Include="shaders\stencilTest\shaderVertex.glsl" />

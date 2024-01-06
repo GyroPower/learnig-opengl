@@ -98,6 +98,10 @@
     <None Include="shaders\Instancing\SimpleExample\shaderVertex.glsl" />
     <None Include="shaders\Instancing\PlanetAndAsteroidsExample\shaderFragment.glsl" />
     <None Include="shaders\Instancing\PlanetAndAsteroidsExample\shaderVertex.glsl" />
+    <None Include="shaders\SimpleShader\shaderFragment.glsl" />
+    <None Include="shaders\SimpleShader\shaderVertex.glsl" />
+    <None Include="shaders\advanceLighting\Blinn-Phong\shaderFragment.glsl" />
+    <None Include="shaders\advanceLighting\Blinn-Phong\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">

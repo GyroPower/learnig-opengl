@@ -14,9 +14,14 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+void activeBlitFramebuffer(unsigned int fboDraw, unsigned int fboRead);
 unsigned int genTextureColorBuffer();
 unsigned int loadTexture(const char* path);
 unsigned int genCubeMap(std::vector<std::string> textures_faces);
+unsigned int genFramebufferObject();
+unsigned int genRenderBufferObjectMultSampled(unsigned int samples);
+unsigned int genRenderBufferObject();
+unsigned int genMultiSampleTexture(unsigned int samples);
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -44,7 +49,7 @@ int main() {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	
+	glfwWindowHint(GLFW_SAMPLES, 4);
 
 #ifdef __APPLE__
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -80,87 +85,106 @@ int main() {
 	// configure global opengl state
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
-	
+	glEnable(GL_MULTISAMPLE);
 
 
-	float quadVertices[] = {
-		// positions     // colors
-		-0.05f,  0.05f,  1.0f, 0.0f, 0.0f,
-		 0.05f, -0.05f,  0.0f, 1.0f, 0.0f,
-		-0.05f, -0.05f,  0.0f, 0.0f, 1.0f,
+	float cubeVertices[] = {
+		// positions       
+		-0.5f, -0.5f, -0.5f,
+		 0.5f, -0.5f, -0.5f,
+		 0.5f,  0.5f, -0.5f,
+		 0.5f,  0.5f, -0.5f,
+		-0.5f,  0.5f, -0.5f,
+		-0.5f, -0.5f, -0.5f,
 
-		-0.05f,  0.05f,  1.0f, 0.0f, 0.0f,
-		 0.05f, -0.05f,  0.0f, 1.0f, 0.0f,
-		 0.05f,  0.05f,  0.0f, 1.0f, 1.0f
+		-0.5f, -0.5f,  0.5f,
+		 0.5f, -0.5f,  0.5f,
+		 0.5f,  0.5f,  0.5f,
+		 0.5f,  0.5f,  0.5f,
+		-0.5f,  0.5f,  0.5f,
+		-0.5f, -0.5f,  0.5f,
+
+		-0.5f,  0.5f,  0.5f,
+		-0.5f,  0.5f, -0.5f,
+		-0.5f, -0.5f, -0.5f,
+		-0.5f, -0.5f, -0.5f,
+		-0.5f, -0.5f,  0.5f,
+		-0.5f,  0.5f,  0.5f,
+
+		 0.5f,  0.5f,  0.5f,
+		 0.5f,  0.5f, -0.5f,
+		 0.5f, -0.5f, -0.5f,
+		 0.5f, -0.5f, -0.5f,
+		 0.5f, -0.5f,  0.5f,
+		 0.5f,  0.5f,  0.5f,
+
+		-0.5f, -0.5f, -0.5f,
+		 0.5f, -0.5f, -0.5f,
+		 0.5f, -0.5f,  0.5f,
+		 0.5f, -0.5f,  0.5f,
+		-0.5f, -0.5f,  0.5f,
+		-0.5f, -0.5f, -0.5f,
+
+		-0.5f,  0.5f, -0.5f,
+		 0.5f,  0.5f, -0.5f,
+		 0.5f,  0.5f,  0.5f,
+		 0.5f,  0.5f,  0.5f,
+		-0.5f,  0.5f,  0.5f,
+		-0.5f,  0.5f, -0.5f
 	};
 
+	float screenCoords[] = {
+		-1.0f,  1.0f,  0.0f, 1.0f,
+		-1.0f, -1.0f,  0.0f, 0.0f,
+		 1.0f, -1.0f,  1.0f, 0.0f,
+
+		-1.0f,  1.0f,  0.0f, 1.0f,
+		 1.0f, -1.0f,  1.0f, 0.0f,
+		 1.0f,  1.0f,  1.0f, 1.0f
+	};
+
+	unsigned int screenVAO, screenVBO;
+
+	glGenVertexArrays(1, &screenVAO);
+	glGenBuffers(1, &screenVBO);
+	glBindVertexArray(screenVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, screenVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(screenCoords), &screenCoords, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+	unsigned int cubeVAO, cubeVBO;
+
+	glGenVertexArrays(1, &cubeVAO);
+	glGenBuffers(1, &cubeVBO);
+	glBindVertexArray(cubeVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	
-	Shader shaderInstancing("shaders/Instancing/PlanetAndAsteroidsExample/shaderVertex.glsl", "shaders/Instancing/PlanetAndAsteroidsExample/shaderFragment.glsl");
-	Shader shaderPlanet("shaders/3DmodelLoadSimple/shaderVertex.glsl", "shaders/3DmodelLoadSimple/shaderFragment.glsl");
+	Shader shaderSimpleCube("shaders/SimpleShader/shaderVertex.glsl", "shaders/SimpleShader/shaderFragment.glsl");
+	Shader shaderFrameBufferMS("shaders/Framebuffers/shadervertex.glsl", "shaders/Framebuffers/shaderFragment.glsl");
 
-	Model planetModel("models/planet/planet.obj");
+	//MutiSampled framebuffer for the MSAA calc
+	unsigned int samples = 4;
+	unsigned int framebufferMultiSampled = genFramebufferObject();
+	unsigned int textureMultiSampled = genMultiSampleTexture(samples);
+	unsigned int renderbufferMultiSampled = genRenderBufferObjectMultSampled(samples);
 	
-	Model asteroidModel("models/asteroid/rock.obj");
+	//Normal Framebuffer to resolve and draw the MSAA calc
+	unsigned int framebufferIntermidate = genFramebufferObject();
+	unsigned int textureDraw = genTextureColorBuffer();
 
-	
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	unsigned int amount = 50000;
 
-	glm::mat4* modelMatrices;
-	modelMatrices = new glm::mat4[amount];
-	srand(glfwGetTime());
-	float radius = 70.0f;
-	float offset = 15.0f;
-
-	//Giving locations for all the asteroids
-	for (unsigned int i = 0; i < amount; i++) {
-		glm::mat4 model(1.0f);
-
-		float angle = (float)i / (float)amount * 360.0f;
-		float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
-		float x = sin(angle) * radius + displacement;
-		displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
-		float y = displacement * 0.4f;
-		displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
-		float z = cos(angle) * radius + displacement;
-		model = glm::translate(model, glm::vec3(x, y, z));
-
-		float scale = (rand() % 20) / 100.0f + 0.05f;
-		model = glm::scale(model, glm::vec3(scale));
-
-		float rotAngle = (rand() % 360);
-		model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
-
-		modelMatrices[i] = model;
-	}
-
-	//Giving the actual data to a buffer
-	unsigned int buffer;
-	glGenBuffers(1, &buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, buffer);
-	glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
-
-	//setting how to read the matrix data and tell it to read the data per instance of the model
-	for (unsigned int i = 0; i < asteroidModel.meshes.size(); i++) {
-		unsigned int VAO = asteroidModel.meshes[i].VAO;
-		glBindVertexArray(VAO);
-
-		glEnableVertexAttribArray(3);
-		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)0);
-		glEnableVertexAttribArray(4);
-		glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)(1 * sizeof(glm::vec4)));
-		glEnableVertexAttribArray(5);
-		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)(2 * sizeof(glm::vec4)));
-		glEnableVertexAttribArray(6);
-		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)(3 * sizeof(glm::vec4)));
-
-		glVertexAttribDivisor(3, 1);
-		glVertexAttribDivisor(4, 1);
-		glVertexAttribDivisor(5, 1);
-		glVertexAttribDivisor(6, 1);
-
-		glBindVertexArray(0);
-	}
+	shaderFrameBufferMS.use();
+	shaderFrameBufferMS.setInt("screenTexture", 0);
 
 	while (!glfwWindowShouldClose(window)) {
 		float currentFrame = (float)glfwGetTime();
@@ -169,37 +193,38 @@ int main() {
 
 		processInput(window);
 
+		glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, framebufferMultiSampled);
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
-		
-		shaderPlanet.use();
+		glEnable(GL_DEPTH_TEST);
+
+
+		shaderSimpleCube.use();
+		glm::mat4 model(1.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 500.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, -3.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(4.0f));
-
-		shaderPlanet.setMat4("view", view);
-		shaderPlanet.setMat4("projection", projection);
-		shaderPlanet.setMat4("model", model);
-		planetModel.Draw(shaderPlanet);
-
-
-		shaderInstancing.use();
-		shaderInstancing.setMat4("view", view);
-		shaderInstancing.setMat4("projection", projection);
-		shaderInstancing.setInt("texture_diffuse1", 0);
+		
+		shaderSimpleCube.setMat4("model", model);
+		shaderSimpleCube.setMat4("view", view);
+		shaderSimpleCube.setMat4("projection", projection);
+		glBindVertexArray(cubeVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		
+		activeBlitFramebuffer(framebufferIntermidate,framebufferMultiSampled);
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glDisable(GL_DEPTH_TEST);
+		
+		shaderFrameBufferMS.use();
+		glBindVertexArray(screenVAO);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, asteroidModel.textures_loaded[0].id);
-		// Draw al the meshes and using draw arrays instaced to draw all the instances we need
-
-		for (unsigned int i = 0; i < asteroidModel.meshes.size(); i++) {
-			glBindVertexArray(asteroidModel.meshes[i].VAO);
-			glDrawElementsInstanced(
-				GL_TRIANGLES, asteroidModel.meshes[i].indices.size(), GL_UNSIGNED_INT, 0, amount
-			);
-		}
+		glBindTexture(GL_TEXTURE_2D, textureDraw);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -209,8 +234,7 @@ int main() {
 	
 	glfwTerminate();
 
-	delete[] modelMatrices;
-
+	
 	return 0;
 
 
@@ -320,6 +344,15 @@ unsigned int loadTexture(const char* path) {
 	return textureID;
 }
 
+unsigned int genFramebufferObject() {
+
+	unsigned int framebuffer;
+	glGenFramebuffers(1, &framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	
+	return framebuffer;
+}
+
 unsigned int genTextureColorBuffer() {
 	unsigned int textureColorBuffer;
 
@@ -332,6 +365,50 @@ unsigned int genTextureColorBuffer() {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBuffer, 0);
 	
 	return textureColorBuffer;
+}
+
+unsigned int genRenderBufferObject(){
+	unsigned int rbo;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+	return rbo;
+}
+
+unsigned int genRenderBufferObjectMultSampled(unsigned int samples) {
+	unsigned int rboMS;
+
+	glGenRenderbuffers(1, &rboMS);
+	glBindRenderbuffer(GL_RENDERBUFFER, rboMS);
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rboMS);
+	
+	return rboMS;
+}
+
+void activeBlitFramebuffer(unsigned int fboDraw , unsigned int fboRead) {
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, fboRead);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboDraw);
+	glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+}
+
+unsigned int genMultiSampleTexture(unsigned int samples) {
+	
+	unsigned int textureID;
+
+	glGenTextures(1, &textureID);
+
+	
+	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
+	glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, GL_RGB, SCR_WIDTH, SCR_HEIGHT, GL_TRUE);
+	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, textureID, 0);
+	
+	return textureID;
 }
 
 unsigned int genCubeMap(std::vector<std::string> textures_faces){
