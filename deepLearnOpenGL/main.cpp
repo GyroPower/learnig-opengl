@@ -16,7 +16,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void activeBlitFramebuffer(unsigned int fboDraw, unsigned int fboRead);
 unsigned int genTextureColorBuffer();
-unsigned int loadTexture(const char* path);
+unsigned int loadTexture(const char* path, bool gamaCorrection);
 unsigned int genCubeMap(std::vector<std::string> textures_faces);
 unsigned int genFramebufferObject();
 unsigned int genRenderBufferObjectMultSampled(unsigned int samples);
@@ -25,9 +25,14 @@ unsigned int genMultiSampleTexture(unsigned int samples);
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
+const unsigned int SHADOW_WIDTH = 1024;
+const unsigned int SHADOW_HEIGHT = 1024;
 
 bool firstMouse = true;
-
+bool gamma = false;
+bool blinnPressed = false;
+bool attenuation = false;
+bool attenPressed = false;
 
 //Initial settup of deltaTime and lastFrame
 float deltaTime = 0.0f;
@@ -86,106 +91,58 @@ int main() {
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_MULTISAMPLE);
+	//glEnable(GL_FRAMEBUFFER_SRGB);
 
+	Shader shaderAdvanceLight("shaders/advanceLighting/Blinn-Phong/shaderVertex.glsl",
+		"shaders/advanceLighting/Blinn-Phong/shaderFragment.glsl");
 
-	float cubeVertices[] = {
-		// positions       
-		-0.5f, -0.5f, -0.5f,
-		 0.5f, -0.5f, -0.5f,
-		 0.5f,  0.5f, -0.5f,
-		 0.5f,  0.5f, -0.5f,
-		-0.5f,  0.5f, -0.5f,
-		-0.5f, -0.5f, -0.5f,
+	float planeVertices[] = {
+		// positions            // normals         // texcoords
+		 10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+		-10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+		-10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
 
-		-0.5f, -0.5f,  0.5f,
-		 0.5f, -0.5f,  0.5f,
-		 0.5f,  0.5f,  0.5f,
-		 0.5f,  0.5f,  0.5f,
-		-0.5f,  0.5f,  0.5f,
-		-0.5f, -0.5f,  0.5f,
-
-		-0.5f,  0.5f,  0.5f,
-		-0.5f,  0.5f, -0.5f,
-		-0.5f, -0.5f, -0.5f,
-		-0.5f, -0.5f, -0.5f,
-		-0.5f, -0.5f,  0.5f,
-		-0.5f,  0.5f,  0.5f,
-
-		 0.5f,  0.5f,  0.5f,
-		 0.5f,  0.5f, -0.5f,
-		 0.5f, -0.5f, -0.5f,
-		 0.5f, -0.5f, -0.5f,
-		 0.5f, -0.5f,  0.5f,
-		 0.5f,  0.5f,  0.5f,
-
-		-0.5f, -0.5f, -0.5f,
-		 0.5f, -0.5f, -0.5f,
-		 0.5f, -0.5f,  0.5f,
-		 0.5f, -0.5f,  0.5f,
-		-0.5f, -0.5f,  0.5f,
-		-0.5f, -0.5f, -0.5f,
-
-		-0.5f,  0.5f, -0.5f,
-		 0.5f,  0.5f, -0.5f,
-		 0.5f,  0.5f,  0.5f,
-		 0.5f,  0.5f,  0.5f,
-		-0.5f,  0.5f,  0.5f,
-		-0.5f,  0.5f, -0.5f
+		 10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+		-10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+		 10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
+	};
+	
+	glm::vec3 lightPos[] = {
+		glm::vec3(-9.0f,0.0f,0.0f),
+		glm::vec3(-5.0f,0.0f,0.0f),
+		glm::vec3(0.0f,0.0f,0.0f),
+		glm::vec3(5.0f,0.0f,0.0f)
 	};
 
-	float screenCoords[] = {
-		-1.0f,  1.0f,  0.0f, 1.0f,
-		-1.0f, -1.0f,  0.0f, 0.0f,
-		 1.0f, -1.0f,  1.0f, 0.0f,
-
-		-1.0f,  1.0f,  0.0f, 1.0f,
-		 1.0f, -1.0f,  1.0f, 0.0f,
-		 1.0f,  1.0f,  1.0f, 1.0f
+	glm::vec3 lightColors[] = {
+		glm::vec3(0.25f),
+		glm::vec3(0.50f),
+		glm::vec3(0.75f),
+		glm::vec3(1.0f)
 	};
 
-	unsigned int screenVAO, screenVBO;
-
-	glGenVertexArrays(1, &screenVAO);
-	glGenBuffers(1, &screenVBO);
-	glBindVertexArray(screenVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, screenVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(screenCoords), &screenCoords, GL_STATIC_DRAW);
+	unsigned int planeVAO, planeVBO;
+	glGenVertexArrays(1, &planeVAO);
+	glGenBuffers(1, &planeVBO);
+	glBindVertexArray(planeVAO);
+	glBindBuffer(GL_ARRAY_BUFFER,planeVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glBindVertexArray(0);
 
-	unsigned int cubeVAO, cubeVBO;
+	unsigned int planeTexture = loadTexture("textures/wood-dark.jpg",false);
+	unsigned int planeTextureGammaCorrected = loadTexture("textures/wood-dark.jpg", true);
 
-	glGenVertexArrays(1, &cubeVAO);
-	glGenBuffers(1, &cubeVBO);
-	glBindVertexArray(cubeVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	shaderAdvanceLight.use();
+	shaderAdvanceLight.setInt("texture1", 0);
 	
-	Shader shaderSimpleCube("shaders/SimpleShader/shaderVertex.glsl", "shaders/SimpleShader/shaderFragment.glsl");
-	Shader shaderFrameBufferMS("shaders/Framebuffers/shadervertex.glsl", "shaders/Framebuffers/shaderFragment.glsl");
 
-	//MutiSampled framebuffer for the MSAA calc
-	unsigned int samples = 4;
-	unsigned int framebufferMultiSampled = genFramebufferObject();
-	unsigned int textureMultiSampled = genMultiSampleTexture(samples);
-	unsigned int renderbufferMultiSampled = genRenderBufferObjectMultSampled(samples);
 	
-	//Normal Framebuffer to resolve and draw the MSAA calc
-	unsigned int framebufferIntermidate = genFramebufferObject();
-	unsigned int textureDraw = genTextureColorBuffer();
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-	shaderFrameBufferMS.use();
-	shaderFrameBufferMS.setInt("screenTexture", 0);
-
 	while (!glfwWindowShouldClose(window)) {
 		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
@@ -193,39 +150,31 @@ int main() {
 
 		processInput(window);
 
-		glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
+		glClearColor(0.009f, 0.009f, 0.009f, 0.01f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, framebufferMultiSampled);
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glEnable(GL_DEPTH_TEST);
-
-
-		shaderSimpleCube.use();
-		glm::mat4 model(1.0f);
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 500.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		
-		shaderSimpleCube.setMat4("model", model);
-		shaderSimpleCube.setMat4("view", view);
-		shaderSimpleCube.setMat4("projection", projection);
-		glBindVertexArray(cubeVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		
-		activeBlitFramebuffer(framebufferIntermidate,framebufferMultiSampled);
-		
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		glDisable(GL_DEPTH_TEST);
-		
-		shaderFrameBufferMS.use();
-		glBindVertexArray(screenVAO);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, textureDraw);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
 
+		shaderAdvanceLight.use();
+		shaderAdvanceLight.setMat4("projection", projection);
+		shaderAdvanceLight.setMat4("view", view);
+
+		shaderAdvanceLight.setVec3("cameraPos", camera.Position);
+		shaderAdvanceLight.setVec3("LightPos", *lightPos,4);
+		shaderAdvanceLight.setVec3("LightColor", *lightColors,4);
+		shaderAdvanceLight.setInt("gamma", gamma);
+		shaderAdvanceLight.setInt("attenuation_bool_quad", attenuation);
+
+		std::cout << (gamma ? "Gamma enabled" : "Gamma disabled") << std::endl;
+		std::cout << (attenuation ? "Atten quadratic" : "Atten linear") << std::endl;
+		std::cout << "" << std::endl;
+
+		glBindVertexArray(planeVAO);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D,(gamma ? planeTextureGammaCorrected : planeTexture) );
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+	
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
@@ -295,11 +244,25 @@ void processInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
 		camera.ProcessKeyBoard(DOWN, deltaTime);
 	}
-
+	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnPressed) {
+		gamma = !gamma;
+		blinnPressed = true;
+	}
+	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE) {
+		
+		blinnPressed = false;
+	}
+	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !attenPressed) {
+		attenuation = !attenuation;
+		attenPressed = true;
+	}
+	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) {
+		attenPressed = false;
+	}
 
 }
 
-unsigned int loadTexture(const char* path) {
+unsigned int loadTexture(const char* path, bool gamaCorrection) {
 	
 	unsigned int textureID;
 
@@ -310,26 +273,29 @@ unsigned int loadTexture(const char* path) {
 	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
 
 	if (data) {
-		GLenum format;
+		GLenum internalFormat;
+		GLenum dataFormat;
 
 		if (nrComponents == 1)
-			format = GL_RED;
+			internalFormat = dataFormat= GL_RED;
 		else if (nrComponents == 3) {
 
-			format = GL_RGB;
+			
+			internalFormat = gamaCorrection ? GL_SRGB : GL_RGB;
+			dataFormat = GL_RGB;
 		
 		}
 		else if (nrComponents == 4) {
-			format = GL_RGBA;
-		
+			internalFormat = gamaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
+			dataFormat = GL_RGBA;
 		}
 
 		glBindTexture(GL_TEXTURE_2D, textureID);
-		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -367,6 +333,20 @@ unsigned int genTextureColorBuffer() {
 	return textureColorBuffer;
 }
 
+unsigned int genTextureDepthMap() {
+	unsigned int depthMap;
+	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+		SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	return depthMap;
+}
+
 unsigned int genRenderBufferObject(){
 	unsigned int rbo;
 	glGenRenderbuffers(1, &rbo);
@@ -375,6 +355,23 @@ unsigned int genRenderBufferObject(){
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
 	return rbo;
+}
+
+unsigned int genDepthMapFBO() {
+	unsigned int depthMapFBO;
+	glGenFramebuffers(1, &depthMapFBO);
+	
+	return depthMapFBO;
+}
+
+void setDepthMap(const unsigned int depthMap, const unsigned int depthMapFBO) {
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 }
 
 unsigned int genRenderBufferObjectMultSampled(unsigned int samples) {
@@ -390,6 +387,7 @@ unsigned int genRenderBufferObjectMultSampled(unsigned int samples) {
 }
 
 void activeBlitFramebuffer(unsigned int fboDraw , unsigned int fboRead) {
+	//writing data to other framebuffer for resolving the MSAA and then painting it to a tex 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, fboRead);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboDraw);
 	glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
