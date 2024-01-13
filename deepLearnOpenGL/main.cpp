@@ -15,6 +15,12 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void activeBlitFramebuffer(unsigned int fboDraw, unsigned int fboRead);
+void renderScene(const Shader& shader);
+void renderCube();
+void renderQuad();
+void setDepthMap(const unsigned int depthMap, const unsigned int depthMapFBO);
+unsigned int genDepthMapFBO();
+unsigned int genTextureDepthMap();
 unsigned int genTextureColorBuffer();
 unsigned int loadTexture(const char* path, bool gamaCorrection);
 unsigned int genCubeMap(std::vector<std::string> textures_faces);
@@ -45,6 +51,8 @@ float lastX = SCR_WIDTH/2.0f, lastY = SCR_HEIGHT/2.0f;
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 //glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+
+unsigned int planeVAO, planeVBO;
 
 int main() {
 	//Initiate glfw to use a window to set opengl 
@@ -93,35 +101,28 @@ int main() {
 	glEnable(GL_MULTISAMPLE);
 	//glEnable(GL_FRAMEBUFFER_SRGB);
 
-	Shader shaderAdvanceLight("shaders/advanceLighting/Blinn-Phong/shaderVertex.glsl",
-		"shaders/advanceLighting/Blinn-Phong/shaderFragment.glsl");
+	Shader shaderDebugQuad("shaders/depthMapCalc/shaderSimpleQuad/shaderVertex.glsl",
+		"shaders/depthMapCalc/shaderSimpleQuad/shaderFragment.glsl");
+
+	Shader shaderSimpleDepthTest("shaders/depthMapCalc/shaderDepthMap/shaderVertex.glsl", 
+		"shaders/depthMapCalc/shaderDepthMap/shaderFragment.glsl");
+
+	Shader shaderShadowTest("shaders/depthMapCalc/shaderRenderShadows/shaderVertex.glsl",
+		"shaders/depthMapCalc/shaderRenderShadows/shaderFragment.glsl");
 
 	float planeVertices[] = {
 		// positions            // normals         // texcoords
-		 10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-		-10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-		-10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+		-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
 
-		 10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-		-10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
-		 10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
+		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+		 25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
 	};
 	
-	glm::vec3 lightPos[] = {
-		glm::vec3(-9.0f,0.0f,0.0f),
-		glm::vec3(-5.0f,0.0f,0.0f),
-		glm::vec3(0.0f,0.0f,0.0f),
-		glm::vec3(5.0f,0.0f,0.0f)
-	};
-
-	glm::vec3 lightColors[] = {
-		glm::vec3(0.25f),
-		glm::vec3(0.50f),
-		glm::vec3(0.75f),
-		glm::vec3(1.0f)
-	};
-
-	unsigned int planeVAO, planeVBO;
+	
+	//Just setting a floorPlane 
 	glGenVertexArrays(1, &planeVAO);
 	glGenBuffers(1, &planeVBO);
 	glBindVertexArray(planeVAO);
@@ -135,14 +136,26 @@ int main() {
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glBindVertexArray(0);
 
-	unsigned int planeTexture = loadTexture("textures/wood-dark.jpg",false);
-	unsigned int planeTextureGammaCorrected = loadTexture("textures/wood-dark.jpg", true);
-
-	shaderAdvanceLight.use();
-	shaderAdvanceLight.setInt("texture1", 0);
+	unsigned int woodTexture = loadTexture("textures/wood-dark.jpg",false);
+	
+	unsigned int depthMapFBO = genDepthMapFBO();
+	//the depthMap it's gonna be usefull for depth test by the lights perspective and make it easy
+	//using this texture and use lightSpaceMatrix it would be easy to see if a fragPos has to be lit
+	unsigned int depthMap = genTextureDepthMap();
+	setDepthMap(depthMap, depthMapFBO);
+	
 	
 
+	glm::vec3 lightPos(-2.0f, 4.0f, -1.0f);
 	
+	
+	shaderShadowTest.use();
+	shaderShadowTest.setInt("diffuseTexture", 0);
+	shaderShadowTest.setInt("shadowMap", 1);
+	shaderDebugQuad.use();
+	shaderDebugQuad.setInt("depthMap", 0);
+
+
 	while (!glfwWindowShouldClose(window)) {
 		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
@@ -150,31 +163,61 @@ int main() {
 
 		processInput(window);
 
-		glClearColor(0.009f, 0.009f, 0.009f, 0.01f);
+		glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 500.0f);
-		glm::mat4 view = camera.GetViewMatrix();
+		float plane_near = 1.0f, plane_far = 7.5f;
+		glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, plane_near, plane_far);
+		glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-		shaderAdvanceLight.use();
-		shaderAdvanceLight.setMat4("projection", projection);
-		shaderAdvanceLight.setMat4("view", view);
+		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
-		shaderAdvanceLight.setVec3("cameraPos", camera.Position);
-		shaderAdvanceLight.setVec3("LightPos", *lightPos,4);
-		shaderAdvanceLight.setVec3("LightColor", *lightColors,4);
-		shaderAdvanceLight.setInt("gamma", gamma);
-		shaderAdvanceLight.setInt("attenuation_bool_quad", attenuation);
-
-		std::cout << (gamma ? "Gamma enabled" : "Gamma disabled") << std::endl;
-		std::cout << (attenuation ? "Atten quadratic" : "Atten linear") << std::endl;
-		std::cout << "" << std::endl;
-
-		glBindVertexArray(planeVAO);
+		
+		shaderSimpleDepthTest.use();
+		shaderSimpleDepthTest.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+		
+		//First rendering the scene from light perspective and generating the depth map
+		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+		glClear(GL_DEPTH_BUFFER_BIT);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D,(gamma ? planeTextureGammaCorrected : planeTexture) );
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-	
+		glBindTexture(GL_TEXTURE_2D, (woodTexture));
+		//culling the front faces to avoid an offset of the shadows from where there should start
+		//this happend for the bias offset to avoid "shadow acne"
+		glCullFace(GL_FRONT);
+		renderScene(shaderSimpleDepthTest);
+		glCullFace(GL_BACK);
+
+		//after that render the actual scene
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		shaderShadowTest.use();
+		glm::mat4 view = camera.GetViewMatrix();
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+		shaderShadowTest.setMat4("projection", projection);
+		shaderShadowTest.setMat4("view", view);
+		shaderShadowTest.setVec3("viewPos", camera.Position);
+		shaderShadowTest.setVec3("lightPos", lightPos);
+		shaderShadowTest.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, woodTexture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		renderScene(shaderShadowTest);
+
+		//This was for rendering the depthMap 
+		shaderDebugQuad.use();
+		shaderDebugQuad.setFloat("plane_near", plane_near);
+		shaderDebugQuad.setFloat("plane_far", plane_far);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		//renderQuad();
+
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
@@ -188,6 +231,139 @@ int main() {
 
 
 }
+
+//render the actual scene, passing the shader need it for that
+void renderScene(const Shader& shader) {
+
+	glm::mat4 model = glm::mat4(1.0f);
+	shader.setMat4("model", model);
+	glBindVertexArray(planeVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0f));
+	model = glm::scale(model, glm::vec3(0.5f));
+	shader.setMat4("model", model);
+	renderCube();
+
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0f));
+	model = glm::scale(model, glm::vec3(0.5f));
+	shader.setMat4("model", model);
+	renderCube();
+
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, 2.0f));
+	model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f)));
+	model = glm::scale(model, glm::vec3(0.25f));
+	shader.setMat4("model", model);
+	renderCube();
+
+
+}
+
+
+unsigned int cubeVAO = 0;
+unsigned int cubeVBO = 0;
+void renderCube() {
+
+	if (cubeVAO == 0) {
+		float vertices[] = {
+			// back face
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+			 1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, // bottom-right         
+			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+			-1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, // top-left
+			// front face
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+			 1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
+			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+			-1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+			// left face
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+			-1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-left
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+			-1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+			// right face
+			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+			 1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-right         
+			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+			 1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-left     
+			 // bottom face
+			 -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+			  1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // top-left
+			  1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+			  1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+			 -1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+			 -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+			 // top face
+			 -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+			  1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+			  1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top-right     
+			  1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+			 -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+			 -1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left        
+		};
+
+		//setting all the data if it's need it
+		glGenVertexArrays(1,&cubeVAO);
+		glGenBuffers(1, &cubeVBO);
+
+		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
+		glBindVertexArray(cubeVAO);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	//draw the cube and unbind the vertex array obj
+	glBindVertexArray(cubeVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+//This is for rendering the depth text to see how it looks like, for debug porpuse
+unsigned int quadVAO = 0, quadVBO;
+void renderQuad() {
+	if (quadVAO == 0) {
+		float quadVertices[] = {
+			-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+			 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+			 1.0f, -1.0f, 0.0f, 1.0f, 0.0f
+		};
+
+		glGenVertexArrays(1, &quadVAO);
+		glGenBuffers(1, &quadVBO);
+		
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+		glBindVertexArray(quadVAO);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	glBindVertexArray(quadVAO);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
+}
+
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
 	camera.ProcessMouseScroll((float)yoffset);
@@ -332,7 +508,7 @@ unsigned int genTextureColorBuffer() {
 	
 	return textureColorBuffer;
 }
-
+//This texture is just for depth test
 unsigned int genTextureDepthMap() {
 	unsigned int depthMap;
 	glGenTextures(1, &depthMap);
@@ -341,9 +517,18 @@ unsigned int genTextureDepthMap() {
 		SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// we set this for the parts of the depthMap those are outside of the projection
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = { 1.0f,1.0f,1.0f,1.0f };
+	//setting the color to be white, meaning this parts are gonna be in light
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
+	//To fix the parts that are far away of the z component of the far plane of the projection
+	//we need to set the shadow to 0.0 if we want to be in light, because those fragments
+	//would be more than 1.0 in the z component
+	//Thats something to change in the shader where the shadow and lighting calculations are 
+	//happening
 	return depthMap;
 }
 
@@ -363,11 +548,13 @@ unsigned int genDepthMapFBO() {
 	
 	return depthMapFBO;
 }
-
+//This is for setting and bind the depthMap tex and the depthMapFBO for render the deothMap
 void setDepthMap(const unsigned int depthMap, const unsigned int depthMapFBO) {
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	// We only need the depth info, no need to render colors
+	// This tell that this FBO it's not gonna render color data
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

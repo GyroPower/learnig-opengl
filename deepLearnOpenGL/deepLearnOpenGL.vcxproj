@@ -177,6 +177,14 @@
     <None Include="shaders\Blending\shaderVertex.glsl" />
     <None Include="shaders\CubeMap\shaderFragment.glsl" />
     <None Include="shaders\CubeMap\shaderVertex.glsl" />
+    <None Include="shaders\depthMapCalc\shaderDepthMap\shaderFragment.glsl" />
+    <None Include="shaders\depthMapCalc\shaderDepthMap\shaderVertex.glsl" />
+    <None Include="shaders\depthMapCalc\shaderFragment.glsl" />
+    <None Include="shaders\depthMapCalc\shaderRenderShadows\shaderFragment.glsl" />
+    <None Include="shaders\depthMapCalc\shaderRenderShadows\shaderVertex.glsl" />
+    <None Include="shaders\depthMapCalc\shaderSimpleQuad\shaderFragment.glsl" />
+    <None Include="shaders\depthMapCalc\shaderSimpleQuad\shaderVertex.glsl" />
+    <None Include="shaders\depthMapCalc\shaderVertex.glsl" />
     <None Include="shaders\DepthTest\shaderVertex.glsl" />
     <None Include="shaders\Framebuffers\shaderFragment.glsl" />
     <None Include="shaders\Framebuffers\shaderVertex.glsl" />
