@@ -19,6 +19,7 @@ void renderScene(const Shader& shader);
 void renderCube();
 void renderQuad();
 void setDepthMap(const unsigned int depthMap, const unsigned int depthMapFBO);
+void attachCubeDepthTex(unsigned int depthCubeMap, unsigned int depthMapFBO);
 unsigned int genDepthMapFBO();
 unsigned int genTextureDepthMap();
 unsigned int genTextureColorBuffer();
@@ -28,6 +29,8 @@ unsigned int genFramebufferObject();
 unsigned int genRenderBufferObjectMultSampled(unsigned int samples);
 unsigned int genRenderBufferObject();
 unsigned int genMultiSampleTexture(unsigned int samples);
+unsigned int genGenericTex();
+unsigned int genTexFacesDepthCubeMap(unsigned int depthCubeMap);
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -39,6 +42,8 @@ bool gamma = false;
 bool blinnPressed = false;
 bool attenuation = false;
 bool attenPressed = false;
+bool spacePressed = true;
+bool shadowOn = false;
 
 //Initial settup of deltaTime and lastFrame
 float deltaTime = 0.0f;
@@ -98,62 +103,45 @@ int main() {
 	// configure global opengl state
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_MULTISAMPLE);
+	glEnable(GL_CULL_FACE);
 	//glEnable(GL_FRAMEBUFFER_SRGB);
 
-	Shader shaderDebugQuad("shaders/depthMapCalc/shaderSimpleQuad/shaderVertex.glsl",
+	/*Shader shaderDebugQuad("shaders/depthMapCalc/shaderSimpleQuad/shaderVertex.glsl",
 		"shaders/depthMapCalc/shaderSimpleQuad/shaderFragment.glsl");
 
 	Shader shaderSimpleDepthTest("shaders/depthMapCalc/shaderDepthMap/shaderVertex.glsl", 
-		"shaders/depthMapCalc/shaderDepthMap/shaderFragment.glsl");
+		"shaders/depthMapCalc/shaderDepthMap/shaderFragment.glsl");*/
 
-	Shader shaderShadowTest("shaders/depthMapCalc/shaderRenderShadows/shaderVertex.glsl",
-		"shaders/depthMapCalc/shaderRenderShadows/shaderFragment.glsl");
-
-	float planeVertices[] = {
-		// positions            // normals         // texcoords
-		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
-		-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
-
-		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
-		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
-		 25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
-	};
+	Shader shaderPointShadowTest("shaders/depthMapCalc/shaderRenderPointShadows/shaderVertex.glsl",
+		"shaders/depthMapCalc/shaderRenderPointShadows/shaderFragment.glsl");
 	
-	
-	//Just setting a floorPlane 
-	glGenVertexArrays(1, &planeVAO);
-	glGenBuffers(1, &planeVBO);
-	glBindVertexArray(planeVAO);
-	glBindBuffer(GL_ARRAY_BUFFER,planeVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glBindVertexArray(0);
+	//using geometry shader for make the render depthCubeMap in one go
+	//to use it we are gonna need a vec of matrices with the lightspace matrix for each
+	//face
+	Shader shaderCubeMapDepth("shaders/depthMapCalc/shaderPointShadows/shaderVertex.glsl",
+		"shaders/depthMapCalc/shaderPointShadows/shaderFragment.glsl",
+		"shaders/depthMapCalc/shaderPointShadows/shaderGeometry.glsl");
 
-	unsigned int woodTexture = loadTexture("textures/wood-dark.jpg",false);
+
+	unsigned int woodTexture = loadTexture("textures/wood2.jpg",false);
 	
 	unsigned int depthMapFBO = genDepthMapFBO();
 	//the depthMap it's gonna be usefull for depth test by the lights perspective and make it easy
 	//using this texture and use lightSpaceMatrix it would be easy to see if a fragPos has to be lit
-	unsigned int depthMap = genTextureDepthMap();
-	setDepthMap(depthMap, depthMapFBO);
+	unsigned int depthCubeMap = genGenericTex();
+	depthCubeMap = genTexFacesDepthCubeMap(depthCubeMap);
+	attachCubeDepthTex(depthCubeMap, depthMapFBO);
+	
+	
+	glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 	
 	
 
-	glm::vec3 lightPos(-2.0f, 4.0f, -1.0f);
-	
-	
-	shaderShadowTest.use();
-	shaderShadowTest.setInt("diffuseTexture", 0);
-	shaderShadowTest.setInt("shadowMap", 1);
-	shaderDebugQuad.use();
-	shaderDebugQuad.setInt("depthMap", 0);
+	shaderPointShadowTest.use();
+	shaderPointShadowTest.setInt("diffuseTexture", 0);
+	shaderPointShadowTest.setInt("depthMap", 1);
+	/*shaderDebugQuad.use();
+	shaderDebugQuad.setInt("depthMap", 0);*/
 
 
 	while (!glfwWindowShouldClose(window)) {
@@ -166,56 +154,66 @@ int main() {
 		glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		float plane_near = 1.0f, plane_far = 7.5f;
-		glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, plane_near, plane_far);
-		glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		//moving light in the scene
+		lightPos.z = (float)sin(glfwGetTime() * 0.5) * 3.0;
+		float aspect = (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT;
+		float near = 1.0f;
+		float far = 25.0f;
+		glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
+		//shadow lightspace to make the rendering of the depthCubeMap from lights pov
+		std::vector<glm::mat4> shadowTransforms;
 
-		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
 
 		
-		shaderSimpleDepthTest.use();
-		shaderSimpleDepthTest.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-		
+
 		//First rendering the scene from light perspective and generating the depth map
 		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, (woodTexture));
+		shaderCubeMapDepth.use();
+		for (unsigned int i = 0; i < 6; i++) {
+
+			shaderCubeMapDepth.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+		}
+		shaderCubeMapDepth.setVec3("lightPos", lightPos);
+		shaderCubeMapDepth.setFloat("far_plane", far);
+
+		renderScene(shaderCubeMapDepth);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		//culling the front faces to avoid an offset of the shadows from where there should start
 		//this happend for the bias offset to avoid "shadow acne"
-		glCullFace(GL_FRONT);
+		/*glCullFace(GL_FRONT);
 		renderScene(shaderSimpleDepthTest);
-		glCullFace(GL_BACK);
+		glCullFace(GL_BACK);*/
 
 		//after that render the actual scene
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		
 
 		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		shaderShadowTest.use();
+		shaderPointShadowTest.use();
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
-		shaderShadowTest.setMat4("projection", projection);
-		shaderShadowTest.setMat4("view", view);
-		shaderShadowTest.setVec3("viewPos", camera.Position);
-		shaderShadowTest.setVec3("lightPos", lightPos);
-		shaderShadowTest.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+		shaderPointShadowTest.setMat4("projection", projection);
+		shaderPointShadowTest.setMat4("view", view);
+		shaderPointShadowTest.setVec3("lightPos", lightPos);
+		shaderPointShadowTest.setVec3("viewPos", camera.Position);
+		shaderPointShadowTest.setFloat("far_plane", far);
+		//active shadow calc and render it pressing space
+		shaderPointShadowTest.setInt("shadows", shadowOn);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, woodTexture);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, depthMap);
-		renderScene(shaderShadowTest);
-
-		//This was for rendering the depthMap 
-		shaderDebugQuad.use();
-		shaderDebugQuad.setFloat("plane_near", plane_near);
-		shaderDebugQuad.setFloat("plane_far", plane_far);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, depthMap);
-		//renderQuad();
+		glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubeMap);
+		renderScene(shaderPointShadowTest);
 
 
 		glfwSwapBuffers(window);
@@ -235,27 +233,41 @@ int main() {
 //render the actual scene, passing the shader need it for that
 void renderScene(const Shader& shader) {
 
+
+
 	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::scale(model, glm::vec3(6.0f));
 	shader.setMat4("model", model);
-	glBindVertexArray(planeVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDisable(GL_CULL_FACE); // note that we disable culling here since we render 'inside' the cube instead of the usual 'outside' which throws off the normal culling methods.
+	shader.setInt("reverse_normals", 1); // A small little hack to invert normals when drawing cube from the inside so lighting still works.
+	renderCube();
+	shader.setInt("reverse_normals", 0); // and of course disable it
+	glEnable(GL_CULL_FACE);
 
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0f));
+	model = glm::translate(model, glm::vec3(4.0f, -3.5f, 0.0));
 	model = glm::scale(model, glm::vec3(0.5f));
 	shader.setMat4("model", model);
 	renderCube();
-
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0f));
+	model = glm::translate(model, glm::vec3(2.0f, 3.0f, 1.0));
+	model = glm::scale(model, glm::vec3(0.75f));
+	shader.setMat4("model", model);
+	renderCube();
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-3.0f, -1.0f, 0.0));
 	model = glm::scale(model, glm::vec3(0.5f));
 	shader.setMat4("model", model);
 	renderCube();
-
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, 2.0f));
-	model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f)));
-	model = glm::scale(model, glm::vec3(0.25f));
+	model = glm::translate(model, glm::vec3(-1.5f, 1.0f, 1.5));
+	model = glm::scale(model, glm::vec3(0.5f));
+	shader.setMat4("model", model);
+	renderCube();
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-1.5f, 2.0f, -3.0));
+	model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
+	model = glm::scale(model, glm::vec3(0.75f));
 	shader.setMat4("model", model);
 	renderCube();
 
@@ -420,22 +432,13 @@ void processInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
 		camera.ProcessKeyBoard(DOWN, deltaTime);
 	}
-	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnPressed) {
-		gamma = !gamma;
-		blinnPressed = true;
+	
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !spacePressed) {
+		shadowOn = !shadowOn;
+		spacePressed = true;
 	}
-	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE) {
-		
-		blinnPressed = false;
-	}
-	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !attenPressed) {
-		attenuation = !attenuation;
-		attenPressed = true;
-	}
-	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) {
-		attenPressed = false;
-	}
-
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
+		spacePressed = false;
 }
 
 unsigned int loadTexture(const char* path, bool gamaCorrection) {
@@ -644,3 +647,36 @@ unsigned int genCubeMap(std::vector<std::string> textures_faces){
 
 	return textureID;
 }
+
+unsigned int genGenericTex() {
+	unsigned int genericTex;
+	glGenTextures(1, &genericTex);
+	
+	return genericTex;
+}
+
+//This for the cubeMap for depth test
+unsigned int genTexFacesDepthCubeMap(unsigned int depthCubeMap) {
+	glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubeMap);
+
+	for (unsigned int i = 0; i < 6; ++i) {
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
+			SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	}
+	return depthCubeMap;
+}
+//attaching the actual textureCubeMap with a FBO to do the depthMap
+void attachCubeDepthTex(unsigned int depthCubeMap, unsigned int depthMapFBO) {
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubeMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+

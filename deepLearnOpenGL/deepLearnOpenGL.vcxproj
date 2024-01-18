@@ -180,6 +180,11 @@
     <None Include="shaders\depthMapCalc\shaderDepthMap\shaderFragment.glsl" />
     <None Include="shaders\depthMapCalc\shaderDepthMap\shaderVertex.glsl" />
     <None Include="shaders\depthMapCalc\shaderFragment.glsl" />
+    <None Include="shaders\depthMapCalc\shaderPointShadows\shaderFragment.glsl" />
+    <None Include="shaders\depthMapCalc\shaderPointShadows\shaderGeometry.glsl" />
+    <None Include="shaders\depthMapCalc\shaderPointShadows\shaderVertex.glsl" />
+    <None Include="shaders\depthMapCalc\shaderRenderPointShadows\shaderFragment.glsl" />
+    <None Include="shaders\depthMapCalc\shaderRenderPointShadows\shaderVertex.glsl" />
     <None Include="shaders\depthMapCalc\shaderRenderShadows\shaderFragment.glsl" />
     <None Include="shaders\depthMapCalc\shaderRenderShadows\shaderVertex.glsl" />
     <None Include="shaders\depthMapCalc\shaderSimpleQuad\shaderFragment.glsl" />
