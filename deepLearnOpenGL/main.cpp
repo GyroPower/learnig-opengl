@@ -20,6 +20,8 @@ void renderCube();
 void renderQuad();
 void setDepthMap(const unsigned int depthMap, const unsigned int depthMapFBO);
 void attachCubeDepthTex(unsigned int depthCubeMap, unsigned int depthMapFBO);
+void renderSimpleWallScene(const Shader& shader);
+void renderSimpleWall();
 unsigned int genDepthMapFBO();
 unsigned int genTextureDepthMap();
 unsigned int genTextureColorBuffer();
@@ -106,42 +108,17 @@ int main() {
 	glEnable(GL_CULL_FACE);
 	//glEnable(GL_FRAMEBUFFER_SRGB);
 
-	/*Shader shaderDebugQuad("shaders/depthMapCalc/shaderSimpleQuad/shaderVertex.glsl",
-		"shaders/depthMapCalc/shaderSimpleQuad/shaderFragment.glsl");
+	Shader shader("shaders/NormalMaps/shaderVertex.glsl", "shaders/NormalMaps/shaderFragment.glsl");
 
-	Shader shaderSimpleDepthTest("shaders/depthMapCalc/shaderDepthMap/shaderVertex.glsl", 
-		"shaders/depthMapCalc/shaderDepthMap/shaderFragment.glsl");*/
-
-	Shader shaderPointShadowTest("shaders/depthMapCalc/shaderRenderPointShadows/shaderVertex.glsl",
-		"shaders/depthMapCalc/shaderRenderPointShadows/shaderFragment.glsl");
+	unsigned int brickwall = loadTexture("textures/brickwall.jpg",false);
+	unsigned int brickwallNormal = loadTexture("textures/brickwall_normal.jpg", false);
 	
-	//using geometry shader for make the render depthCubeMap in one go
-	//to use it we are gonna need a vec of matrices with the lightspace matrix for each
-	//face
-	Shader shaderCubeMapDepth("shaders/depthMapCalc/shaderPointShadows/shaderVertex.glsl",
-		"shaders/depthMapCalc/shaderPointShadows/shaderFragment.glsl",
-		"shaders/depthMapCalc/shaderPointShadows/shaderGeometry.glsl");
-
-
-	unsigned int woodTexture = loadTexture("textures/wood2.jpg",false);
+	glm::vec3 lightPos(0.0f, 1.0f, 0.0f);
 	
-	unsigned int depthMapFBO = genDepthMapFBO();
-	//the depthMap it's gonna be usefull for depth test by the lights perspective and make it easy
-	//using this texture and use lightSpaceMatrix it would be easy to see if a fragPos has to be lit
-	unsigned int depthCubeMap = genGenericTex();
-	depthCubeMap = genTexFacesDepthCubeMap(depthCubeMap);
-	attachCubeDepthTex(depthCubeMap, depthMapFBO);
-	
-	
-	glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
-	
-	
-
-	shaderPointShadowTest.use();
-	shaderPointShadowTest.setInt("diffuseTexture", 0);
-	shaderPointShadowTest.setInt("depthMap", 1);
-	/*shaderDebugQuad.use();
-	shaderDebugQuad.setInt("depthMap", 0);*/
+	shader.use();
+	shader.setInt("diffuseMap", 0);
+	shader.setInt("normalMap",1);
+	//shader.setInt("depthMap", 2);
 
 
 	while (!glfwWindowShouldClose(window)) {
@@ -154,66 +131,27 @@ int main() {
 		glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		//moving light in the scene
-		lightPos.z = (float)sin(glfwGetTime() * 0.5) * 3.0;
-		float aspect = (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT;
-		float near = 1.0f;
-		float far = 25.0f;
-		glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
-		//shadow lightspace to make the rendering of the depthCubeMap from lights pov
-		std::vector<glm::mat4> shadowTransforms;
-
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-
-		
-
-		//First rendering the scene from light perspective and generating the depth map
-		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-		glClear(GL_DEPTH_BUFFER_BIT);
-		shaderCubeMapDepth.use();
-		for (unsigned int i = 0; i < 6; i++) {
-
-			shaderCubeMapDepth.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-		}
-		shaderCubeMapDepth.setVec3("lightPos", lightPos);
-		shaderCubeMapDepth.setFloat("far_plane", far);
-
-		renderScene(shaderCubeMapDepth);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		//culling the front faces to avoid an offset of the shadows from where there should start
-		//this happend for the bias offset to avoid "shadow acne"
-		/*glCullFace(GL_FRONT);
-		renderScene(shaderSimpleDepthTest);
-		glCullFace(GL_BACK);*/
-
-		//after that render the actual scene
 		
 
 		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		shaderPointShadowTest.use();
+		shader.use();
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
-		shaderPointShadowTest.setMat4("projection", projection);
-		shaderPointShadowTest.setMat4("view", view);
-		shaderPointShadowTest.setVec3("lightPos", lightPos);
-		shaderPointShadowTest.setVec3("viewPos", camera.Position);
-		shaderPointShadowTest.setFloat("far_plane", far);
+		shader.setMat4("projection", projection);
+		shader.setMat4("view", view);
+		shader.setVec3("lightPos", lightPos);
+		shader.setVec3("viewPos", camera.Position);
+		
 		//active shadow calc and render it pressing space
-		shaderPointShadowTest.setInt("shadows", shadowOn);
+		//shader.setInt("shadows", shadowOn);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, woodTexture);
+		glBindTexture(GL_TEXTURE_2D, brickwall);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubeMap);
-		renderScene(shaderPointShadowTest);
+		glBindTexture(GL_TEXTURE_2D, brickwallNormal);
+		renderSimpleWallScene(shader);
 
 
 		glfwSwapBuffers(window);
@@ -228,6 +166,18 @@ int main() {
 	return 0;
 
 
+}
+
+void renderSimpleWallScene(const Shader& shader) {
+
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.0f));
+	model = glm::scale(model, glm::vec3(0.75f));
+	//model = glm::rotate(model, glm::radians(30.0f), glm::normalize(glm::vec3(1.0, 0.0, 0.0)));
+	shader.setMat4("model", model);
+	glDisable(GL_CULL_FACE);
+	renderSimpleWall();
+	glEnable(GL_CULL_FACE);
 }
 
 //render the actual scene, passing the shader need it for that
@@ -274,6 +224,100 @@ void renderScene(const Shader& shader) {
 
 }
 
+unsigned int wallVAO = 0;
+unsigned int wallVBO = 0;
+void renderSimpleWall() {
+
+	if (wallVAO == 0) {
+		//Coords of triangles in 3D space
+		glm::vec3 pos1(-1.0, 1.0, 0.0);
+		glm::vec3 pos2(-1.0, -1.0, 0.0);
+		glm::vec3 pos3(1.0, -1.0, 0.0);
+		glm::vec3 pos4(1.0, 1.0, 0.0);
+
+		//Coords of textures
+		glm::vec2 uv1(0.0, 1.0);
+		glm::vec2 uv2(0.0, 0.0);
+		glm::vec2 uv3(1.0, 0.0);
+		glm::vec2 uv4(1.0, 1.0);
+
+		//Normal of the tangent space looking to z
+		glm::vec3 nm(0.0, 0.0, 1.0);
+
+		
+		//Triangle 1
+		//Getting the edges to calc the tangent and bitangent of triangle 1
+		glm::vec3 edge1 = pos2 - pos1;
+		glm::vec3 edge2 = pos3 - pos1;
+		glm::vec2 deltaUV1 = uv2 - uv1;
+		glm::vec2 deltaUV2 = uv3 - uv1;
+
+		glm::vec3 tangent1, bitangent1;
+		glm::vec3 tangent2, bitangent2;
+
+		//calc the tangent and bitangent of triangle1
+		float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+		tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+		tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+		tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+		bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+		bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+		bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+		//Triangle 2 
+		//Getting the edges to calc the tangent and bitangent of triangle 1
+		edge1 = pos3 - pos1;
+		edge2 = pos4 - pos1;
+		deltaUV1 = uv3 - uv1;
+		deltaUV2 = uv4 - uv1;
+
+		//calc the tangent and bitangent of triangle2
+		f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+		tangent2.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+		tangent2.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+		tangent2.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+		bitangent2.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+		bitangent2.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+		bitangent2.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+
+		//setting the data to make the TBN matrix and calc better ilumination based of a normal map
+		float vertices[]{
+			pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+			pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv2.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+			pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+
+			pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+			pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+			pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z
+		};
+		glGenVertexArrays(1,&wallVAO);
+		glBindVertexArray(wallVAO);
+		glGenBuffers(1, &wallVBO);
+
+		glBindBuffer(GL_ARRAY_BUFFER, wallVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6 * sizeof(float)));
+		glEnableVertexAttribArray(3);
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(8 * sizeof(float)));
+		glEnableVertexAttribArray(4);
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	glBindVertexArray(wallVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glBindVertexArray(wallVAO);
+}
 
 unsigned int cubeVAO = 0;
 unsigned int cubeVBO = 0;

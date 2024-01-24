@@ -115,6 +115,9 @@
     <None Include="shaders\depthMapCalc\shaderPointShadows\shaderVertex.glsl" />
     <None Include="shaders\depthMapCalc\shaderRenderPointShadows\shaderFragment.glsl" />
     <None Include="shaders\depthMapCalc\shaderRenderPointShadows\shaderVertex.glsl" />
+    <None Include="textures\skybox.zip" />
+    <None Include="shaders\NormalMaps\shaderFragment.glsl" />
+    <None Include="shaders\NormalMaps\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">
@@ -178,6 +181,18 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="textures\wood.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\brickwall.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\brickwall_normal.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\wood2.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\wood-dark.jpg">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

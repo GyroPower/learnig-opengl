@@ -206,6 +206,8 @@
     <None Include="shaders\Lighting\shaderFragmentLighting.glsl" />
     <None Include="shaders\DepthTest\shaderFragmentDepth.glsl" />
     <None Include="shaders\Lighting\shaderVertexLighting.glsl" />
+    <None Include="shaders\NormalMaps\shaderFragment.glsl" />
+    <None Include="shaders\NormalMaps\shaderVertex.glsl" />
     <None Include="shaders\SimpleShader\shaderFragment.glsl" />
     <None Include="shaders\SimpleShader\shaderVertex.glsl" />
     <None Include="shaders\stencilTest\shaderFragment.glsl" />
@@ -216,9 +218,12 @@
     <None Include="shaders\UniformBlocks\shaders2\shaderFragment.glsl" />
     <None Include="shaders\UniformBlocks\shaders3\shaderFragment.glsl" />
     <None Include="shaders\UniformBlocks\shaders4\shaderFragment.glsl" />
+    <None Include="textures\skybox.zip" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\blending_transparent_window.png" />
+    <Image Include="textures\brickwall.jpg" />
+    <Image Include="textures\brickwall_normal.jpg" />
     <Image Include="textures\container.jpg" />
     <Image Include="textures\container2.png" />
     <Image Include="textures\container2_specular.png" />
@@ -238,7 +243,9 @@
     <Image Include="textures\skybox\right.jpg" />
     <Image Include="textures\skybox\top.jpg" />
     <Image Include="textures\wall.jpg" />
+    <Image Include="textures\wood-dark.jpg" />
     <Image Include="textures\wood.jpg" />
+    <Image Include="textures\wood2.jpg" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="models\source_attribution.txt" />
