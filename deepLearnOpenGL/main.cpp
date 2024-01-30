@@ -105,19 +105,21 @@ int main() {
 	// configure global opengl state
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
 	//glEnable(GL_FRAMEBUFFER_SRGB);
 
-	Shader shader("shaders/NormalMaps/shaderVertex.glsl", "shaders/NormalMaps/shaderFragment.glsl");
+	Shader shader("shaders/ParallaxMapping/shaderVertex.glsl", "shaders/ParallaxMapping/shaderFragment.glsl");
 
-	unsigned int brickwall = loadTexture("textures/brickwall.jpg",false);
-	unsigned int brickwallNormal = loadTexture("textures/brickwall_normal.jpg", false);
-	
-	glm::vec3 lightPos(0.0f, 1.0f, 0.0f);
+	unsigned int brickwall = loadTexture("textures/bricks2.jpg",false);
+	unsigned int brickwallNormal = loadTexture("textures/bricks2_normal.jpg", false);
+	unsigned int brickwallDepth = loadTexture("textures/bricks2_disp.jpg", false);
+
+	glm::vec3 lightPos(0.5f, 1.0f, 0.3f);
 	
 	shader.use();
 	shader.setInt("diffuseMap", 0);
 	shader.setInt("normalMap",1);
+	shader.setInt("depthMap", 2);
 	//shader.setInt("depthMap", 2);
 
 
@@ -144,13 +146,15 @@ int main() {
 		shader.setMat4("view", view);
 		shader.setVec3("lightPos", lightPos);
 		shader.setVec3("viewPos", camera.Position);
-		
+		shader.setFloat("height_scale", 0.1f);
 		//active shadow calc and render it pressing space
 		//shader.setInt("shadows", shadowOn);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, brickwall);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, brickwallNormal);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, brickwallDepth);
 		renderSimpleWallScene(shader);
 
 
@@ -171,13 +175,13 @@ int main() {
 void renderSimpleWallScene(const Shader& shader) {
 
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.0f));
-	model = glm::scale(model, glm::vec3(0.75f));
+	//model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.0f));
+	//model = glm::scale(model, glm::vec3(0.75f));
 	//model = glm::rotate(model, glm::radians(30.0f), glm::normalize(glm::vec3(1.0, 0.0, 0.0)));
 	shader.setMat4("model", model);
-	glDisable(GL_CULL_FACE);
+	//glDisable(GL_CULL_FACE);
 	renderSimpleWall();
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
 }
 
 //render the actual scene, passing the shader need it for that
@@ -555,6 +559,8 @@ unsigned int genTextureColorBuffer() {
 	
 	return textureColorBuffer;
 }
+
+
 //This texture is just for depth test
 unsigned int genTextureDepthMap() {
 	unsigned int depthMap;

@@ -118,6 +118,8 @@
     <None Include="textures\skybox.zip" />
     <None Include="shaders\NormalMaps\shaderFragment.glsl" />
     <None Include="shaders\NormalMaps\shaderVertex.glsl" />
+    <None Include="shaders\ParallaxMapping\shaderFragment.glsl" />
+    <None Include="shaders\ParallaxMapping\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">

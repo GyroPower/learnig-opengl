@@ -208,6 +208,8 @@
     <None Include="shaders\Lighting\shaderVertexLighting.glsl" />
     <None Include="shaders\NormalMaps\shaderFragment.glsl" />
     <None Include="shaders\NormalMaps\shaderVertex.glsl" />
+    <None Include="shaders\ParallaxMapping\shaderFragment.glsl" />
+    <None Include="shaders\ParallaxMapping\shaderVertex.glsl" />
     <None Include="shaders\SimpleShader\shaderFragment.glsl" />
     <None Include="shaders\SimpleShader\shaderVertex.glsl" />
     <None Include="shaders\stencilTest\shaderFragment.glsl" />
