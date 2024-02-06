@@ -22,6 +22,8 @@ void setDepthMap(const unsigned int depthMap, const unsigned int depthMapFBO);
 void attachCubeDepthTex(unsigned int depthCubeMap, unsigned int depthMapFBO);
 void renderSimpleWallScene(const Shader& shader);
 void renderSimpleWall();
+void renderTunnelScene(const Shader& shader);
+void renderSceneWall(const Shader& shader);
 unsigned int genDepthMapFBO();
 unsigned int genTextureDepthMap();
 unsigned int genTextureColorBuffer();
@@ -30,9 +32,11 @@ unsigned int genCubeMap(std::vector<std::string> textures_faces);
 unsigned int genFramebufferObject();
 unsigned int genRenderBufferObjectMultSampled(unsigned int samples);
 unsigned int genRenderBufferObject();
+unsigned int genRenderBufferDepthObject();
 unsigned int genMultiSampleTexture(unsigned int samples);
 unsigned int genGenericTex();
 unsigned int genTexFacesDepthCubeMap(unsigned int depthCubeMap);
+unsigned int genTextureColorBuffer16F();
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -41,23 +45,27 @@ const unsigned int SHADOW_HEIGHT = 1024;
 
 bool firstMouse = true;
 bool gamma = false;
-bool blinnPressed = false;
-bool attenuation = false;
-bool attenPressed = false;
+bool gammaPressed = false;
+bool hdr = false;
+bool hdrPressed = false;
 bool spacePressed = true;
 bool shadowOn = false;
+bool change = false;
+bool changePressed = false;
 
 //Initial settup of deltaTime and lastFrame
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+float exposure = 1.0f;
+
 //firsts lasts pos of mouse in x and y
 float lastX = SCR_WIDTH/2.0f, lastY = SCR_HEIGHT/2.0f;
 
 //camera initial settup
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 9.0f));
 
-//glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+
 
 unsigned int planeVAO, planeVBO;
 
@@ -108,20 +116,43 @@ int main() {
 	//glEnable(GL_CULL_FACE);
 	//glEnable(GL_FRAMEBUFFER_SRGB);
 
-	Shader shader("shaders/ParallaxMapping/shaderVertex.glsl", "shaders/ParallaxMapping/shaderFragment.glsl");
+	Shader hdrShader("shaders/HDR/QuadRender/shaderVertex.glsl", "shaders/HDR/QuadRender/shaderFragment.glsl");
+	Shader shader("shaders/HDR/shaderSimple/shaderVertex.glsl", "shaders/HDR/ShaderSimple/shaderFragment.glsl");
 
-	unsigned int brickwall = loadTexture("textures/bricks2.jpg",false);
-	unsigned int brickwallNormal = loadTexture("textures/bricks2_normal.jpg", false);
-	unsigned int brickwallDepth = loadTexture("textures/bricks2_disp.jpg", false);
-
-	glm::vec3 lightPos(0.5f, 1.0f, 0.3f);
+	//This scene use hdr (hight dynamic range) for better look of bright and dark details of the scene
+	//Using a tone mapping to get all the values back to ldr (low dynamic range)
+	//with hdr allow us tu use light sources more intense than 1.0f value
+	//giving more detail and realistic results of lit of the rendered scene
+	unsigned int wood = loadTexture("textures/wood2.jpg",false);
+	unsigned int woodGammaCorrected = loadTexture("textures/wood2.jpg", true);
+	unsigned int hdrFBO = genFramebufferObject();
+	unsigned int hdrRBO = genRenderBufferDepthObject();
+	//This texture have more memory to store color values and give the light of a scene 
+	//brighter values and look like that without get clamped in the value 1.0f
+	unsigned int hdrTexture = genTextureColorBuffer16F();
 	
-	shader.use();
-	shader.setInt("diffuseMap", 0);
-	shader.setInt("normalMap",1);
-	shader.setInt("depthMap", 2);
-	//shader.setInt("depthMap", 2);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer not complete!" << std::endl;
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	
+	hdrShader.use();
+	hdrShader.setInt("hdrBuffer", 0);
+
+	std::vector<glm::vec3> lightColors;
+	lightColors.push_back(glm::vec3(200.0f));
+	lightColors.push_back(glm::vec3(0.1f, 0.0f, 0.0f));
+	lightColors.push_back(glm::vec3(0.0f, 0.0f, 0.2f));
+	lightColors.push_back(glm::vec3(0.0f, 0.1f,		0.0f));
+
+	std::vector<glm::vec3> lightPos;
+	lightPos.push_back(glm::vec3(0.0f, 0.0f, 23.5f));
+	lightPos.push_back(glm::vec3(-1.4f, -1.9f, -6.0f));
+	lightPos.push_back(glm::vec3(0.0f, -1.8f, -3.0f));
+	lightPos.push_back(glm::vec3(1.8f, -1.7f, -4.5f));
+	
+	
 
 	while (!glfwWindowShouldClose(window)) {
 		float currentFrame = (float)glfwGetTime();
@@ -130,33 +161,41 @@ int main() {
 
 		processInput(window);
 
-		glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.1f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		
-
-		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		shader.use();
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		
+		
+		shader.use();
+		shader.setInt("diffuseMap", 0);
+		glActiveTexture(GL_TEXTURE0);
 
+
+		glBindTexture(GL_TEXTURE_2D, woodGammaCorrected);
+
+		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader.setMat4("projection", projection);
 		shader.setMat4("view", view);
-		shader.setVec3("lightPos", lightPos);
 		shader.setVec3("viewPos", camera.Position);
-		shader.setFloat("height_scale", 0.1f);
-		//active shadow calc and render it pressing space
-		//shader.setInt("shadows", shadowOn);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, brickwall);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, brickwallNormal);
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, brickwallDepth);
-		renderSimpleWallScene(shader);
+		shader.setVec3("lightColor", lightColors[0], lightColors.size());
+		shader.setVec3("lightPos", lightPos[0], lightPos.size());
+		renderTunnelScene(shader);
+		
 
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		hdrShader.use();
+		hdrShader.setInt("hdr", hdr);
+		hdrShader.setFloat("exposure", exposure);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, hdrTexture);
+		renderQuad();
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -184,27 +223,47 @@ void renderSimpleWallScene(const Shader& shader) {
 	//glEnable(GL_CULL_FACE);
 }
 
+void renderTunnelScene(const Shader& shader) {
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+	model = glm::scale(model, glm::vec3(2.5, 2.5f, 27.5f));
+	
+	shader.setMat4("model", model);
+	shader.setInt("inverse_normals", true);
+	renderCube();
+	
+}
+
+void renderSceneWall(const Shader& shader) {
+
+	glm::mat4 model(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, 0.0f, -4.0f));
+	model = glm::rotate(model, glm::radians(50.0f), glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f)));
+	shader.setMat4("model", model);
+	renderSimpleWall();
+}
+
 //render the actual scene, passing the shader need it for that
 void renderScene(const Shader& shader) {
 
 
 
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::scale(model, glm::vec3(6.0f));
+	/*model = glm::scale(model, glm::vec3(6.0f));
 	shader.setMat4("model", model);
 	glDisable(GL_CULL_FACE); // note that we disable culling here since we render 'inside' the cube instead of the usual 'outside' which throws off the normal culling methods.
 	shader.setInt("reverse_normals", 1); // A small little hack to invert normals when drawing cube from the inside so lighting still works.
 	renderCube();
 	shader.setInt("reverse_normals", 0); // and of course disable it
 	glEnable(GL_CULL_FACE);
-
+	*/
 	model = glm::mat4(1.0f);
 	model = glm::translate(model, glm::vec3(4.0f, -3.5f, 0.0));
 	model = glm::scale(model, glm::vec3(0.5f));
 	shader.setMat4("model", model);
 	renderCube();
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(2.0f, 3.0f, 1.0));
+	model = glm::translate(model, glm::vec3(2.0f, 3.0f, 1.0)); 
 	model = glm::scale(model, glm::vec3(0.75f));
 	shader.setMat4("model", model);
 	renderCube();
@@ -487,6 +546,32 @@ void processInput(GLFWwindow* window) {
 	}
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
 		spacePressed = false;
+	//Active hdr
+	if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS && !hdrPressed) {
+		hdr = !hdr;
+		hdrPressed = true;
+		std::cout << "hdr:" << (hdr ? "active" : "no active") << std::endl;
+		std::cout << std::endl;
+	}
+	if (glfwGetKey(window, GLFW_KEY_H) == GLFW_RELEASE)
+		hdrPressed = false;
+
+	if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
+		if (exposure < 5.0f)
+			exposure += 0.001f;
+		else
+			exposure = 5.0f;
+	}
+	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+		if (exposure > 0.0f)
+			exposure -= 0.001f;
+		else
+			exposure = 0.0f;
+	}
+
+	
+		
+
 }
 
 unsigned int loadTexture(const char* path, bool gamaCorrection) {
@@ -560,6 +645,19 @@ unsigned int genTextureColorBuffer() {
 	return textureColorBuffer;
 }
 
+unsigned int genTextureColorBuffer16F() {
+	unsigned int textureColorBuffer16F;
+
+	glGenTextures(1, &textureColorBuffer16F);
+	glBindTexture(GL_TEXTURE_2D, textureColorBuffer16F);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBuffer16F, 0);
+	
+	return textureColorBuffer16F;
+}
 
 //This texture is just for depth test
 unsigned int genTextureDepthMap() {
@@ -593,6 +691,16 @@ unsigned int genRenderBufferObject(){
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
 	return rbo;
+}
+
+unsigned int genRenderBufferDepthObject() {
+	unsigned int depthRBO;
+	glGenRenderbuffers(1, &depthRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, depthRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRBO);
+	
+	return depthRBO;
 }
 
 unsigned int genDepthMapFBO() {

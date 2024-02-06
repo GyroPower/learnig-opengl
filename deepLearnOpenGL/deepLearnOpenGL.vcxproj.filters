@@ -120,6 +120,14 @@
     <None Include="shaders\NormalMaps\shaderVertex.glsl" />
     <None Include="shaders\ParallaxMapping\shaderFragment.glsl" />
     <None Include="shaders\ParallaxMapping\shaderVertex.glsl" />
+    <None Include="shaders\HDR\shaderTangentSpace\shaderFragment.glsl" />
+    <None Include="shaders\HDR\shaderTangentSpace\shaderVertex.glsl" />
+    <None Include="shaders\HDR\QuadRender\shaderFragment.glsl" />
+    <None Include="shaders\HDR\QuadRender\shaderVertex.glsl" />
+    <None Include="shaders\HDR\openGLTutorialShaders\shaderFragment.glsl" />
+    <None Include="shaders\HDR\openGLTutorialShaders\shaderVertex.glsl" />
+    <None Include="shaders\HDR\shaderSimple\shaderVertex.glsl" />
+    <None Include="shaders\HDR\shaderSimple\shaderFragment.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">

@@ -196,6 +196,14 @@
     <None Include="shaders\GeometryShader\shaderFragment.glsl" />
     <None Include="shaders\GeometryShader\shaderGeometry.glsl" />
     <None Include="shaders\GeometryShader\shaderVertex.glsl" />
+    <None Include="shaders\HDR\openGLTutorialShaders\shaderFragment.glsl" />
+    <None Include="shaders\HDR\openGLTutorialShaders\shaderVertex.glsl" />
+    <None Include="shaders\HDR\QuadRender\shaderFragment.glsl" />
+    <None Include="shaders\HDR\QuadRender\shaderVertex.glsl" />
+    <None Include="shaders\HDR\shaderSimple\shaderFragment.glsl" />
+    <None Include="shaders\HDR\shaderTangentSpace\shaderFragment.glsl" />
+    <None Include="shaders\HDR\shaderTangentSpace\shaderVertex.glsl" />
+    <None Include="shaders\HDR\shaderSimple\shaderVertex.glsl" />
     <None Include="shaders\Instancing\PlanetAndAsteroidsExample\shaderFragment.glsl" />
     <None Include="shaders\Instancing\PlanetAndAsteroidsExample\shaderVertex.glsl" />
     <None Include="shaders\Instancing\SimpleExample\shaderFragment.glsl" />
