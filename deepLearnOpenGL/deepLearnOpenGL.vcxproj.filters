@@ -128,6 +128,14 @@
     <None Include="shaders\HDR\openGLTutorialShaders\shaderVertex.glsl" />
     <None Include="shaders\HDR\shaderSimple\shaderVertex.glsl" />
     <None Include="shaders\HDR\shaderSimple\shaderFragment.glsl" />
+    <None Include="shaders\Bloom\shaderExtractColor\shaderFragment.glsl" />
+    <None Include="shaders\Bloom\shaderExtractColor\shaderVertex.glsl" />
+    <None Include="shaders\Bloom\shaderColorCube\shaderFragment.glsl" />
+    <None Include="shaders\Bloom\shaderColorCube\shaderVertex.glsl" />
+    <None Include="shaders\Bloom\QuadRender\shaderFragment.glsl" />
+    <None Include="shaders\Bloom\QuadRender\shaderVertex.glsl" />
+    <None Include="shaders\Bloom\shaderGaussianBlur\shaderFragment.glsl" />
+    <None Include="shaders\Bloom\shaderGaussianBlur\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">

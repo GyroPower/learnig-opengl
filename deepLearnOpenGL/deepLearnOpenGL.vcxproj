@@ -175,6 +175,14 @@
     <None Include="shaders\advanceLighting\Blinn-Phong\shaderVertex.glsl" />
     <None Include="shaders\Blending\shaderFragment.glsl" />
     <None Include="shaders\Blending\shaderVertex.glsl" />
+    <None Include="shaders\Bloom\QuadRender\shaderFragment.glsl" />
+    <None Include="shaders\Bloom\QuadRender\shaderVertex.glsl" />
+    <None Include="shaders\Bloom\shaderColorCube\shaderFragment.glsl" />
+    <None Include="shaders\Bloom\shaderColorCube\shaderVertex.glsl" />
+    <None Include="shaders\Bloom\shaderExtractColor\shaderFragment.glsl" />
+    <None Include="shaders\Bloom\shaderExtractColor\shaderVertex.glsl" />
+    <None Include="shaders\Bloom\shaderGaussianBlur\shaderFragment.glsl" />
+    <None Include="shaders\Bloom\shaderGaussianBlur\shaderVertex.glsl" />
     <None Include="shaders\CubeMap\shaderFragment.glsl" />
     <None Include="shaders\CubeMap\shaderVertex.glsl" />
     <None Include="shaders\depthMapCalc\shaderDepthMap\shaderFragment.glsl" />
