@@ -136,6 +136,12 @@
     <None Include="shaders\Bloom\QuadRender\shaderVertex.glsl" />
     <None Include="shaders\Bloom\shaderGaussianBlur\shaderFragment.glsl" />
     <None Include="shaders\Bloom\shaderGaussianBlur\shaderVertex.glsl" />
+    <None Include="shaders\Deferred-shading\gBufferShader\shaderFragment.glsl" />
+    <None Include="shaders\Deferred-shading\gBufferShader\shaderVertex.glsl" />
+    <None Include="shaders\Deferred-shading\lightingShader\shaderFragment.glsl" />
+    <None Include="shaders\Deferred-shading\lightingShader\shaderVertex.glsl" />
+    <None Include="shaders\Deferred-shading\shaderLightBox\shaderFragment.glsl" />
+    <None Include="shaders\Deferred-shading\shaderLightBox\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">

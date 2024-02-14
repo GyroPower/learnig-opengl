@@ -185,6 +185,12 @@
     <None Include="shaders\Bloom\shaderGaussianBlur\shaderVertex.glsl" />
     <None Include="shaders\CubeMap\shaderFragment.glsl" />
     <None Include="shaders\CubeMap\shaderVertex.glsl" />
+    <None Include="shaders\Deferred-shading\gBufferShader\shaderFragment.glsl" />
+    <None Include="shaders\Deferred-shading\gBufferShader\shaderVertex.glsl" />
+    <None Include="shaders\Deferred-shading\lightingShader\shaderFragment.glsl" />
+    <None Include="shaders\Deferred-shading\lightingShader\shaderVertex.glsl" />
+    <None Include="shaders\Deferred-shading\shaderLightBox\shaderFragment.glsl" />
+    <None Include="shaders\Deferred-shading\shaderLightBox\shaderVertex.glsl" />
     <None Include="shaders\depthMapCalc\shaderDepthMap\shaderFragment.glsl" />
     <None Include="shaders\depthMapCalc\shaderDepthMap\shaderVertex.glsl" />
     <None Include="shaders\depthMapCalc\shaderFragment.glsl" />
