@@ -234,6 +234,14 @@
     <None Include="shaders\ParallaxMapping\shaderVertex.glsl" />
     <None Include="shaders\SimpleShader\shaderFragment.glsl" />
     <None Include="shaders\SimpleShader\shaderVertex.glsl" />
+    <None Include="shaders\SSAO\geometryStage\shaderFragment.glsl" />
+    <None Include="shaders\SSAO\geometryStage\shaderVertex.glsl" />
+    <None Include="shaders\SSAO\shaderQuadRender\shaderFragment.glsl" />
+    <None Include="shaders\SSAO\shaderQuadRender\shaderVertex.glsl" />
+    <None Include="shaders\SSAO\shaderSSAOBlur\shaderFragment.glsl" />
+    <None Include="shaders\SSAO\shaderSSAOBlur\shaderVertex.glsl" />
+    <None Include="shaders\SSAO\shaderSSAO\shaderFragment.glsl" />
+    <None Include="shaders\SSAO\shaderSSAO\shaderVertex.glsl" />
     <None Include="shaders\stencilTest\shaderFragment.glsl" />
     <None Include="shaders\stencilTest\shaderFragmentSingleColor.glsl" />
     <None Include="shaders\stencilTest\shaderVertex.glsl" />

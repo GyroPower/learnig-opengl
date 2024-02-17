@@ -142,6 +142,14 @@
     <None Include="shaders\Deferred-shading\lightingShader\shaderVertex.glsl" />
     <None Include="shaders\Deferred-shading\shaderLightBox\shaderFragment.glsl" />
     <None Include="shaders\Deferred-shading\shaderLightBox\shaderVertex.glsl" />
+    <None Include="shaders\SSAO\geometryStage\shaderFragment.glsl" />
+    <None Include="shaders\SSAO\geometryStage\shaderVertex.glsl" />
+    <None Include="shaders\SSAO\shaderSSAO\shaderFragment.glsl" />
+    <None Include="shaders\SSAO\shaderSSAO\shaderVertex.glsl" />
+    <None Include="shaders\SSAO\shaderSSAOBlur\shaderFragment.glsl" />
+    <None Include="shaders\SSAO\shaderSSAOBlur\shaderVertex.glsl" />
+    <None Include="shaders\SSAO\shaderQuadRender\shaderFragment.glsl" />
+    <None Include="shaders\SSAO\shaderQuadRender\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">
