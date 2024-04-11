@@ -242,6 +242,10 @@ public:
 		glUniformMatrix4fv(mat4Loc, 1, GL_FALSE, glm::value_ptr(value));
 	}
 
+	void setMat3(const std::string& name, glm::mat3 value)const {
+		int mat3Loc = glGetUniformLocation(this->ID, name.c_str());
+		glUniformMatrix3fv(mat3Loc, 1, GL_FALSE, glm::value_ptr(value));
+	}
 	/*void setMat4(const std::string& name, glm::mat4 value, unsigned int amount)const {
 		int mat4Lic = glGetUniformLocation(this->ID, name.c_str());
 		glUniformMatrix4

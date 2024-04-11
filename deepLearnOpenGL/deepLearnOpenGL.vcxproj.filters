@@ -150,6 +150,22 @@
     <None Include="shaders\SSAO\shaderSSAOBlur\shaderVertex.glsl" />
     <None Include="shaders\SSAO\shaderQuadRender\shaderFragment.glsl" />
     <None Include="shaders\SSAO\shaderQuadRender\shaderVertex.glsl" />
+    <None Include="shaders\PBR\directLighting\shaderFragment.glsl" />
+    <None Include="shaders\PBR\directLighting\shaderVertex.glsl" />
+    <None Include="shaders\PBR\renderSphereLight\shaderFragment.glsl" />
+    <None Include="shaders\PBR\renderSphereLight\shaderVertex.glsl" />
+    <None Include="shaders\PBR\EquirectToCubemap\shaderFragment.glsl" />
+    <None Include="shaders\PBR\EquirectToCubemap\shaderVertex.glsl" />
+    <None Include="shaders\PBR\shaderCubemap\shaderFragment.glsl" />
+    <None Include="shaders\PBR\shaderCubemap\shaderVertex.glsl" />
+    <None Include="shaders\PBR\cubeMapToIrradiance\shaderFragment.glsl" />
+    <None Include="shaders\PBR\cubeMapToIrradiance\shaderVertex.glsl" />
+    <None Include="shaders\PBR\cubeMapToSpecular\shaderFragment.glsl" />
+    <None Include="shaders\PBR\cubeMapToSpecular\shaderVertex.glsl" />
+    <None Include="shaders\PBR\brdfShader\shaderFragment.glsl" />
+    <None Include="shaders\PBR\brdfShader\shaderVertex.glsl" />
+    <None Include="shaders\PBR\renderQuad\shaderFragment.glsl" />
+    <None Include="shaders\PBR\renderQuad\shaderVertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">

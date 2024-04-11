@@ -5,9 +5,9 @@
 #include<random>
 #include<glad/glad.h>
 #include<GLFW/glfw3.h>
-#include<glm/glm.hpp>
-#include<glm/gtc/matrix_transform.hpp>
-#include<glm/gtc/type_ptr.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include"OwnHeaderFiles/ShaderProgram/shaderClass.h"
 #include"OwnHeaderFiles/model/Model.h"
 #include"OwnHeaderFiles/camera/camera.h"
@@ -41,21 +41,28 @@ void renderCubesColor(const Shader& shader, std::vector<glm::vec3> lightColor, s
 void renderPlaneScene(const Shader& shader, unsigned int textureID);
 void colorsAttachment();
 void setSSAOcolorBuffer(unsigned int ssaoColorBuffer);
+void renderSphere();
 float lerp(float a, float b, float f);
+unsigned int genCubeMap(unsigned int internalformat = GL_RGB16F, unsigned int scr_width = 512,
+	unsigned int scr_height = 512);
+unsigned int genCubeMapMipmap();
 unsigned int genDepthMapFBO();
 unsigned int genTextureDepthMap();
 unsigned int genTextureColorBuffer(unsigned int wrap);
-unsigned int loadTexture(const char* path, bool gamaCorrection);
-unsigned int genCubeMap(std::vector<std::string> textures_faces);
+unsigned int loadTexture(const char* path, bool gamaCorrection = false);
+unsigned int loadHDRTexture(const char* path);
+unsigned int loadCubeMapTex(std::vector<std::string> textures_faces);
 unsigned int genFramebufferObject();
 unsigned int genRenderBufferObjectMultSampled(unsigned int samples);
 unsigned int genRenderBufferObject();
 unsigned int genRenderBufferDepthObject();
+unsigned int genRenderBuffercubeMap(int scr_width = 512, int scr_height = 512);
 unsigned int genMultiSampleTexture(unsigned int samples);
 unsigned int genGenericTex();
 unsigned int genTexFacesDepthCubeMap(unsigned int depthCubeMap);
 unsigned int genNoiseTexture(std::vector<glm::vec3>* ssaoNoise);
 unsigned int genTextureColorBuffer16F(unsigned int wrap);
+unsigned int genLUTTexture();
 unsigned int* genTextureColorBuffers16F(unsigned int amount);
 unsigned int* genPingpongFBO();
 unsigned int* genPingpongColorBuffer16F(unsigned int* pingpongFBO);
@@ -137,92 +144,199 @@ int main() {
 	// configure global opengl state
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	glDepthFunc(GL_LEQUAL);
 	
-	// Load backpack 3d model
-	Model backpack("models/backpack/backpack.obj");
+	Shader shader("shaders/PBR/directLighting/shaderVertex.glsl",
+		"shaders/PBR/directLighting/shaderFragment.glsl");
+	Shader shaderLight("shaders/PBR/renderSphereLight/shaderVertex.glsl",
+		"shaders/PBR/renderSphereLight/shaderFragment.glsl");
+	Shader shaderEquirectTocubeMap("shaders/PBR/EquirectToCubemap/shaderVertex.glsl",
+		"shaders/PBR/EquirectToCubemap/shaderFragment.glsl");
+	Shader shaderBackgroundSkybox("shaders/PBR/shaderCubemap/shaderVertex.glsl",
+		"shaders/PBR/shaderCubemap/shaderFragment.glsl");
+	Shader shaderIrradianceMap("shaders/PBR/cubeMapToIrradiance/shaderVertex.glsl",
+		"shaders/PBR/cubeMapToIrradiance/shaderFragment.glsl");
+	Shader shaderSpecularMap("shaders/PBR/cubeMapToSpecular/shaderVertex.glsl",
+		"shaders/PBR/cubeMapToSpecular/shaderFragment.glsl");
+	Shader shaderBRDF("shaders/PBR/brdfShader/shaderVertex.glsl",
+		"shaders/PBR/brdfShader/shaderFragment.glsl");
+	Shader RenderQuad("shaders/PBR/renderQuad/shaderVertex.glsl",
+		"shaders/PBR/renderQuad/shaderFragment.glsl");
 
-	//this is the order of the pipeline of the rendered scene using screen-space ambient occlusion
-	//This is to give better ambient component of lighting, give more or less occlusion 
-	//depending of fragments around the object, give more shadows depending of the depth
-	//of the fragment compare the others nearby around
-	Shader shaderGeometryPass("shaders/SSAO/geometryStage/shaderVertex.glsl",
-		"shaders/SSAO/geometryStage/shaderFragment.glsl");
+	unsigned int captureFBO = genFramebufferObject();
+	unsigned int captureRBO = genRenderBuffercubeMap();
+	
+	unsigned int envCubemap = genCubeMap();
+	unsigned int irradianceCubemap = genCubeMap(GL_RGBA16F, 32, 32);
+	//Cubemap that stores different levels of cubemaps increasing roughness levels
+	//this cubemap stores the reflection of surfaces with differents rough values
+	unsigned int specularCubemap = genCubeMapMipmap();
+	unsigned int brdfLUTTexture = genLUTTexture();
+	
+	//This mat4 is for capture a scene, a face of a scene, this gives of how the 
+	//scene is projected to the screen 
+	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+	//This is the directions of where the view matrix is looking in the scene
+	glm::mat4 captureViews[] = {
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+	};
 
-	Shader shaderSSAOPass("shaders/SSAO/shaderSSAO/shaderVertex.glsl",
-		"shaders/SSAO/shaderSSAO/shaderFragment.glsl");
+	//the hdr texture helps for better sense of lighting and it's in a format that allows
+	//values of colors that are not clamped to 1.0 value, that's why it's called hdr
+	//texture
+	//This is considered a more precise form of ambient lighting
+	unsigned int hdrTexture = loadHDRTexture("textures/PBR/cubeMap_enviroment/christmas_photo_studio_07_8k.hdr");
+	
+	//This textures gives us the values of the surfaces to reflect better the light 
+	//and give more details to the surface
+	unsigned int albedoMap = loadTexture("textures/PBR/rustedIron/rustediron1-alt2-bl/rustediron2_basecolor.png");
+	unsigned int metallicMap = loadTexture("textures/PBR/rustedIron/rustediron1-alt2-bl/rustediron2_metallic.png");
+	unsigned int normalMap = loadTexture("textures/PBR/rustedIron/rustediron1-alt2-bl/rustediron2_normal.png");
+	unsigned int roughnessMap = loadTexture("textures/PBR/rustedIron/rustediron1-alt2-bl/rustediron2_roughness.png");
+	
 
-	Shader shaderSSAOBlurPass("shaders/SSAO/shaderSSAOBlur/shaderVertex.glsl",
-		"shaders/SSAO/shaderSSAOBlur/shaderFragment.glsl");
+	//convert equirectangularmap to cubeMap
+	shaderEquirectTocubeMap.use();
+	shaderEquirectTocubeMap.setInt("equirectangularMap", 0);
+	shaderEquirectTocubeMap.setMat4("projection", captureProjection);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, hdrTexture);
 
-	Shader shaderLightingPass("shaders/SSAO/shaderQuadRender/shaderVertex.glsl",
-		"shaders/SSAO/shaderQuadRender/shaderFragment.glsl");
+	glViewport(0, 0, 512, 512); //this is the size of the capture dimensions
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
 
-	// gbuffer has good use in this case because ssao it's a screen space tecnique
-	gBuffer GbufferSSAO = genGbufferSSAO(); 
+	for (unsigned int i = 0; i < 6; i++) {
+		//render each face of the cube map and giving the directions to see the scene
+		//and capturing the rendered scene into the cubemap
+		shaderEquirectTocubeMap.setMat4("view", captureViews[i]);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubemap, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		renderCube();
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
-	//we need to have examples to compare around the fragment 
-	//and see how many occlusion need in the fragment
-	std::uniform_real_distribution<GLfloat> randomFloats(0.0, 1.0);
-	std::default_random_engine generator;
-	std::vector<glm::vec3> ssaoKernel;
 
-	for (unsigned int i = 0; i < 64; ++i) {
-		glm::vec3 sample(
-			randomFloats(generator) * 2.0 - 1.0,
-			randomFloats(generator) * 2.0 - 1.0,
-			randomFloats(generator)
-		);
-		sample = glm::normalize(sample);
-		sample *= randomFloats(generator);
-		float scale = (float)i / 64.0f;
-		scale = lerp(0.1f, 1.0f, scale * scale);
-		sample *= scale;
-		ssaoKernel.push_back(sample);
+	// as is not hightly detailed the texture we set the resolution to 32x32
+	
+	glBindRenderbuffer(GL_FRAMEBUFFER, captureRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
+
+	//Now is time for the irradiance map, that gives us the global lighting ambience
+	shaderIrradianceMap.use();
+	shaderIrradianceMap.setInt("environmentMap", 0);
+	shaderIrradianceMap.setMat4("projection", captureProjection);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+
+	
+	glViewport(0, 0, 32, 32);
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+
+
+	//do the irradiance calc for each face and store it in the irradiance cubemap
+	// this is the diffuse part of the ibl tecnique
+	for (unsigned int i = 0; i < 6; i++) {
+		shaderIrradianceMap.setMat4("view", captureViews[i]);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceCubemap, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		renderCube();
 	}
 
-	//This vector gives values where the samples are gonna rotate
-	//reducing the samples to get good results
-	std::vector<glm::vec3> ssaoNoise;
-	for (unsigned int i = 0; i < 16; i++) {
-		glm::vec3 noise(
-			randomFloats(generator) * 2.0 - 1.0,
-			randomFloats(generator) * 2.0 - 1.0,
-			0.0
-		);
-		ssaoNoise.push_back(noise);
+	// this is the specular part and reflective part of the obl tecnique
+	shaderSpecularMap.use();
+	shaderSpecularMap.setInt("enviromentMap", 0);
+	shaderSpecularMap.setMat4("projection", captureProjection);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+	
+
+	glBindFramebuffer(GL_TEXTURE_CUBE_MAP, captureFBO);
+	unsigned int maxMipLevels = 5;
+	// this cube map it's gonna have mip levels depending of the roughness
+	// this is for storing differents reflections depending of the roughness
+	// with less rough value a better look like a mirror surface
+	// in this cubemap we gonna store the reflective part of the specular part of ibl
+	for (unsigned int mip = 0; mip < maxMipLevels; mip++) {
+		// each mipmap levels we reduce the resolution of the reflection
+		// because more roughness less detail we need to store
+		unsigned int mipWidth = 256 * std::pow(0.5, mip);
+		unsigned int mipHeight = 256 * std::pow(0.5, mip);
+
+		glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
+		glViewport(0, 0, mipWidth, mipHeight);
+
+		float roughness = (float)mip / (float)(maxMipLevels - 1);
+		shaderSpecularMap.setFloat("roughness", roughness);
+
+		for (unsigned int i = 0; i < 6; i++) {
+			shaderSpecularMap.setMat4("view", captureViews[i]);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, specularCubemap, mip);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			renderCube();
+		}
 	}
+
+
+	// this part it's for precomputate the the brdf part of the ibl of the scene
+	// this generate a texture for every combination of normal and light direction on 
+	// varying roughness values
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUTTexture, 0);
+
+	glViewport(0, 0, 512, 512);
+	shaderBRDF.use();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	renderQuad();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+
+	shader.use();
+	/*shader.setInt("albedoMap", 0);
+	shader.setInt("metallicMap", 1);
+	shader.setInt("normalMap", 2);
+	shader.setInt("roughnessMap", 3);*/
+	shader.setInt("irradianceMap", 0);
+	shader.setInt("prefilterMap", 1);
+	shader.setInt("brdfLUT", 2);
+	shader.setVec3("albedo", glm::vec3(0.5f, 0.0f, 0.0f));
+	shader.setFloat("ao", 1.0f);
+
+	glm::vec3 lightPositions[] = {
+		glm::vec3(0.0f, -10.0f, 10.0f), 
+	};
+	glm::vec3 lightColors[] = {
+		glm::vec3(300.0f),
+		
+	};
+
+	int nrRows = 7;
+	int nrColumns = 7;
+	float spacing = 2.5f;
+
+	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+	shader.use();
+	shader.setMat4("projection", projection);
+	shaderBackgroundSkybox.use();
+	shaderBackgroundSkybox.setInt("enviromentMap", 0);
+	shaderBackgroundSkybox.setMat4("projection", projection);
 	
-	//all the random rotate data it's gonna be saved in a 4x4 texture
-	unsigned int noiseTexture = genNoiseTexture(&ssaoNoise);
-	
-	//This buffer it's gonna render and save the ambientOcclusion values
-	//for the lit pass
-	unsigned int ssaoFBO = genFramebufferObject();
-	unsigned int ssaoColorBuffer = genGenericTex();
-	setSSAOcolorBuffer(ssaoColorBuffer);
-
-	//we are gonna blur the ssao scene 
-	unsigned int ssaoBlurFBO = genFramebufferObject();
-	unsigned int ssaoColorBufferBlur = genGenericTex();
-	setSSAOcolorBuffer(ssaoColorBufferBlur);
-
-	glm::vec3 lightPos(2.0f, 4.0f, -2.0f);
-	glm::vec3 lightColor(0.2f, 0.2f, 0.7f);
-	 
-	shaderSSAOPass.use();
-	shaderSSAOPass.setInt("gFragPos", 0);
-	shaderSSAOPass.setInt("gNormal", 1);
-	shaderSSAOPass.setInt("texNoise", 2);
-	
-	shaderSSAOBlurPass.use();
-	shaderSSAOBlurPass.setInt("ssaoInput", 0);
-
-	shaderLightingPass.use();
-	shaderLightingPass.setInt("gFragPos", 0);
-	shaderLightingPass.setInt("gNormal", 1);
-	shaderLightingPass.setInt("gAlbedoSpec", 2);
-	shaderLightingPass.setInt("ssao", 3);
-
 
 	while (!glfwWindowShouldClose(window)) {
 		float currentFrame = (float)glfwGetTime();
@@ -234,94 +348,75 @@ int main() {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// write all the data in the gbuffer and render the data in 3 differents tex
-		glBindFramebuffer(GL_FRAMEBUFFER, GbufferSSAO.gbuffer);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// setting the data for the geometry pass of the deferred rendering
-		glm::mat4 view = camera.GetViewMatrix();
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-		
-		glm::mat4 model(1.0);
-
-		shaderGeometryPass.use();
-		shaderGeometryPass.setMat4("projection", projection);
-		shaderGeometryPass.setMat4("view", view);
-
-		//render a big cube where the 3d model it's gonna lie down
-		model = glm::translate(model, glm::vec3(0.0f, 7.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(7.5f, 7.5f, 7.5f));
-		shaderGeometryPass.setMat4("model", model);
-		shaderGeometryPass.setInt("inverseNormals", true);
-		renderCube();
-		shaderGeometryPass.setInt("inverseNormals", false);
-
-		//the backpack model
-		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(0.0f, 0.5f, 0.0f));
-		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f));
-		shaderGeometryPass.setMat4("model", model);
-		backpack.Draw(shaderGeometryPass);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		
-		//making the ssao calc and store the data in a tex to use
-		glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
-		glClear(GL_COLOR_BUFFER_BIT);
-		shaderSSAOPass.use();
-		
-		//passing all the samples pos
-		for (unsigned int i = 0; i < 64; ++i)
-			shaderSSAOPass.setVec3("samples[" + std::to_string(i) + "]", ssaoKernel[i]);
-		shaderSSAOPass.setMat4("projection", projection);
-
-		//bind the needes textures for ssao
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, GbufferSSAO.gPosition);
+		/*glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, albedoMap);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, GbufferSSAO.gNormal);
+		glBindTexture(GL_TEXTURE_2D, metallicMap);
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, noiseTexture);
-		renderQuad();
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-		//bluring the rendered scene
-		glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO);
-		glClear(GL_COLOR_BUFFER_BIT);
-		shaderSSAOBlurPass.use();
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, ssaoColorBuffer);
-		renderQuad();
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-		//rendered the final scene with lighting calcs
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		shaderLightingPass.use();
-		glm::vec3 lightPosView = glm::vec3(camera.GetViewMatrix() * glm::vec4(lightPos, 1.0f));
-		shaderLightingPass.setVec3("light.Position", lightPosView);
-		shaderLightingPass.setVec3("light.Color", lightColor);
-
-		const float linear = 0.09f;
-		const float quadratic = 0.032f;
-
-		shaderLightingPass.setFloat("light.Linear", linear);
-		shaderLightingPass.setFloat("light.Quadratic", quadratic);
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, GbufferSSAO.gPosition);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, GbufferSSAO.gNormal);
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, GbufferSSAO.gAlbedoSpecular);
+		glBindTexture(GL_TEXTURE_2D, normalMap);
 		glActiveTexture(GL_TEXTURE3);
-		//This texture give the data for ambient component of lighting
-		glBindTexture(GL_TEXTURE_2D, ssaoColorBufferBlur);
-		renderQuad();
-		
+		glBindTexture(GL_TEXTURE_2D, roughnessMap)*/;
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceCubemap);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, specularCubemap);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
 
+		shader.use();
+		glm::mat4 view(camera.GetViewMatrix());
+		shader.setMat4("view", view);
+		shader.setVec3("camPos", camera.Position);
+
+		glm::mat4 model(1.0f);
+
+		for (int row = 0; row < nrRows; ++row) {
+			shader.setFloat("metallic", (float)row / (float)nrRows);
+			for (int col = 0; col < nrColumns; ++col) {
+				
+				shader.setFloat("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
+				model = glm::mat4(1.0f);
+				model = glm::translate(model, glm::vec3(
+					(col - (nrColumns / 2)) * spacing,
+					(row - (nrRows / 2)) * spacing,
+					0.0f
+				));
+				shader.setMat4("model", model);
+				shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+				renderSphere();
+			}
+		}
+		//commented just for use of the indirect light from the hdr texture
+		/*shaderLight.use();
+		shaderLight.setMat4("projection", projection);
+		shaderLight.setMat4("view", camera.GetViewMatrix());
+		for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i) {
+			glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
+			newPos = lightPositions[i];
+			
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, newPos);
+			model = glm::scale(model, glm::vec3(0.5f));
+			shaderLight.use();
+			shaderLight.setMat4("model", model);
+			shaderLight.setVec3("lightColor", lightColors[i]);
+			renderSphere();
+			shader.use();
+			shader.setVec3("lightPositions[" + std::to_string(i) + "]", newPos);
+			shader.setVec3("lightColors[" + std::to_string(i) + "]", lightColors[i]);
+		}*/
+
+		shaderBackgroundSkybox.use();
+		shaderBackgroundSkybox.setMat4("view", view);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+		renderCube();
+
+		/*RenderQuad.use();
+		RenderQuad.setInt("LUTTexture", 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+		renderQuad();*/
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -335,6 +430,100 @@ int main() {
 	return 0;
 
 
+}
+
+unsigned int sphereVAO = 0;
+unsigned int indexCount;
+void renderSphere() {
+	if (sphereVAO == 0) {
+		glGenVertexArrays(1, &sphereVAO);
+
+		unsigned int vbo, ebo;
+		glGenBuffers(1, &vbo);
+		glGenBuffers(1, &ebo);
+
+		std::vector<glm::vec3> positions;
+		std::vector<glm::vec2> uv;
+		std::vector<glm::vec3> normals;
+		std::vector<unsigned int> indices;
+
+		const unsigned int X_SEGMENTS = 64;
+		const unsigned int Y_SEGMENTS = 64;
+		const float PI = 3.14159265359f;
+
+		for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
+		{
+			for (unsigned int y = 0; y <= Y_SEGMENTS; ++y)
+			{
+				float xSegment = (float)x / (float)X_SEGMENTS;
+				float ySegment = (float)y / (float)Y_SEGMENTS;
+				float xPos = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+				float yPos = std::cos(ySegment * PI);
+				float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+
+				positions.push_back(glm::vec3(xPos, yPos, zPos));
+				uv.push_back(glm::vec2(xSegment, ySegment));
+				normals.push_back(glm::vec3(xPos, yPos, zPos));
+			}
+		}
+		bool oddRow = false;
+
+		for (unsigned int y = 0; y < Y_SEGMENTS; ++y)
+		{
+			if (!oddRow) // even rows: y == 0, y == 2; and so on
+			{
+				for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
+				{
+					indices.push_back(y * (X_SEGMENTS + 1) + x);
+					indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+				}
+			}
+			else
+			{
+				for (int x = X_SEGMENTS; x >= 0; --x)
+				{
+					indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+					indices.push_back(y * (X_SEGMENTS + 1) + x);
+				}
+			}
+			oddRow = !oddRow;
+		}
+
+		indexCount = static_cast<unsigned int>(indices.size());
+
+		std::vector<float> data;
+
+		for (unsigned int i = 0; i < positions.size(); ++i) {
+			data.push_back(positions[i].x);
+			data.push_back(positions[i].y);
+			data.push_back(positions[i].z);
+
+			if (normals.size()) {
+				data.push_back(normals[i].x);
+				data.push_back(normals[i].y);
+				data.push_back(normals[i].z);
+			}
+			if (uv.size()) {
+				data.push_back(uv[i].x);
+				data.push_back(uv[i].y);
+			}
+		}
+		glBindVertexArray(sphereVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(float), &data[0], GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+		unsigned int stride = (3 + 2 + 3) * sizeof(float);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+
+	}
+	glBindVertexArray(sphereVAO);
+	glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
 }
 
 void renderPlaneScene(const Shader& shader, unsigned int textureID) {
@@ -792,6 +981,7 @@ unsigned int loadTexture(const char* path, bool gamaCorrection) {
 
 	glGenTextures(1, &textureID);
 
+	
 	int width, height, nrComponents;
 
 	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
@@ -806,6 +996,8 @@ unsigned int loadTexture(const char* path, bool gamaCorrection) {
 
 			
 			internalFormat = gamaCorrection ? GL_SRGB : GL_RGB;
+			
+			
 			dataFormat = GL_RGB;
 		
 		}
@@ -816,13 +1008,15 @@ unsigned int loadTexture(const char* path, bool gamaCorrection) {
 
 		glBindTexture(GL_TEXTURE_2D, textureID);
 		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
+		
+		
 		glGenerateMipmap(GL_TEXTURE_2D);
-
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+		
 		stbi_image_free(data);
 	}
 	else
@@ -832,6 +1026,48 @@ unsigned int loadTexture(const char* path, bool gamaCorrection) {
 	}
 
 	return textureID;
+}
+
+unsigned int loadHDRTexture(const char* path) {
+	unsigned int hdrTexture;
+	stbi_set_flip_vertically_on_load(true);
+
+	glGenTextures(1, &hdrTexture);
+
+	int width, height, nrComponents;
+
+	float* data = stbi_loadf(path, &width, &height, &nrComponents, 0);
+
+	if (data) {
+		GLenum internalFormat;
+		GLenum dataFormat;
+		std::string dataFormatS;
+
+		if (nrComponents == 3) {
+			internalFormat = GL_RGB16F;
+			dataFormat = GL_RGB;
+			
+		}
+		else if (nrComponents == 4) {
+			internalFormat = GL_RGBA16F;
+			dataFormat = GL_RGBA;
+			
+		}
+		
+		
+		glBindTexture(GL_TEXTURE_2D, hdrTexture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		stbi_image_free(data);
+	}
+	else {
+		std::cout << "Failed to load HDR image" << std::endl;
+	}
+	return hdrTexture;
 }
 
 unsigned int genFramebufferObject() {
@@ -855,6 +1091,20 @@ unsigned int genTextureColorBuffer(unsigned int wrap = GL_LINEAR) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBuffer, 0);
 	
 	return textureColorBuffer;
+}
+
+unsigned int genLUTTexture() {
+	unsigned int brdfLUTTexture;
+	glGenTextures(1, &brdfLUTTexture);
+
+	glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, 512, 512, 0, GL_RG, GL_FLOAT, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	return brdfLUTTexture;
 }
 
 unsigned int genTextureColorBuffer16F(unsigned int wrap = GL_LINEAR) {
@@ -981,6 +1231,16 @@ unsigned int genRenderBufferDepthObject() {
 	return depthRBO;
 }
 
+unsigned int genRenderBuffercubeMap(int scr_width, int scr_height) {
+	unsigned int captureRBO;
+	glGenRenderbuffers(1, &captureRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, scr_width, scr_height); 
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+	
+	return captureRBO;
+}
+
 unsigned int genDepthMapFBO() {
 	unsigned int depthMapFBO;
 	glGenFramebuffers(1, &depthMapFBO);
@@ -1035,7 +1295,7 @@ unsigned int genMultiSampleTexture(unsigned int samples) {
 	return textureID;
 }
 
-unsigned int genCubeMap(std::vector<std::string> textures_faces){
+unsigned int loadCubeMapTex(std::vector<std::string> textures_faces){
 
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
@@ -1082,6 +1342,62 @@ unsigned int genCubeMap(std::vector<std::string> textures_faces){
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
 	return textureID;
+}
+
+unsigned int genCubeMap(unsigned int internalformat, unsigned int scr_width,
+	unsigned int scr_height) {
+	
+	unsigned int cubeMap;
+	unsigned int format;
+
+	if (internalformat == GL_RGB16F)
+		format = GL_RGB;
+	else if (internalformat == GL_RGBA16F)
+		format = GL_RGBA;
+	else if (internalformat == GL_RED)
+		format = GL_RED;
+
+	
+	glGenTextures(1, &cubeMap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
+
+	for (unsigned int i = 0; i < 6; i++) {
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalformat,
+			scr_width, scr_height, 0, format, GL_FLOAT, nullptr);
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	return cubeMap;
+}
+
+unsigned int genCubeMapMipmap() {
+	//This generates a cubemap with mipmap levels for store different pre-filtered
+	//reflections maps
+	//we use GL_LINEAR_MIPMAP_LINEAR to enable trilinear filtering for better looking
+	//and use a resolution of 128x128 at base resolution, and because the smoother 
+	//surfaces are small 
+	unsigned int prefilterMap;
+	glGenTextures(1, &prefilterMap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+
+	for (unsigned int i = 0; i < 6; i++) {
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 256, 256, 0, GL_RGB, GL_FLOAT, nullptr);
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	//This allows us to allocate memory for the mipmas
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+	return prefilterMap;
 }
 
 unsigned int genGenericTex() {
