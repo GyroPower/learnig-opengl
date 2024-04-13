@@ -5,18 +5,21 @@ in vec3 WorldPos;
 in vec3 Normal;
 
 // material parameters
-//uniform sampler2D albedoMap;
-//uniform sampler2D metallicMap;
+uniform sampler2D albedoMap;
+uniform sampler2D metallicMap;
 uniform sampler2D normalMap;
-//uniform sampler2D roughnessMap;
+uniform sampler2D roughnessMap;
+uniform sampler2D aoMap;
 uniform samplerCube irradianceMap;
-uniform vec3 albedo;
-uniform float metallic;
-uniform float roughness;
-uniform float ao;
-
 uniform samplerCube prefilterMap;
 uniform sampler2D brdfLUT;
+
+//uniform vec3 albedo;
+//uniform float metallic;
+//uniform float roughness;
+//uniform float ao;
+uniform bool aoUse;
+
 
 // lights
 uniform vec3 lightPositions[4];
@@ -96,14 +99,17 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 // ----------------------------------------------------------------------------
 void main()
 {		
-    //vec3 albedo = pow(texture(albedoMap, TexCoords).rgb,vec3(2.2));
-    //vec3 normal = getNormalFromNormalMap();
-    //float metallic = texture(metallicMap, TexCoords).r;
-    //float roughness = texture(roughnessMap,TexCoords).r;
-    //vec3 irradiance = texture(irradianceMap, TexCoords).rgb;
-    //float ao = texture(aoMap, TexCoords).r;
+    vec3 albedo = pow(texture(albedoMap, TexCoords).rgb,vec3(2.2));
+    float ao = 1.0;
+    float metallic = texture(metallicMap, TexCoords).r;
+    float roughness = texture(roughnessMap,TexCoords).r;
+    
+    if (aoUse)
+        ao = texture(aoMap, TexCoords).r;
+    else
+        ao = 1.0;
 
-    vec3 N = normalize(Normal);
+    vec3 N = getNormalFromNormalMap();
     vec3 V = normalize(camPos - WorldPos);
     vec3 R = reflect(-V, N);
 

@@ -191,15 +191,26 @@ int main() {
 	//values of colors that are not clamped to 1.0 value, that's why it's called hdr
 	//texture
 	//This is considered a more precise form of ambient lighting
-	unsigned int hdrTexture = loadHDRTexture("textures/PBR/cubeMap_enviroment/christmas_photo_studio_07_8k.hdr");
+	unsigned int hdrTexture = loadHDRTexture("textures/PBR/cubeMap_enviroment/christmas_photo_studio_07_4k.hdr");
 	
 	//This textures gives us the values of the surfaces to reflect better the light 
 	//and give more details to the surface
-	unsigned int albedoMap = loadTexture("textures/PBR/rustedIron/rustediron1-alt2-bl/rustediron2_basecolor.png");
-	unsigned int metallicMap = loadTexture("textures/PBR/rustedIron/rustediron1-alt2-bl/rustediron2_metallic.png");
-	unsigned int normalMap = loadTexture("textures/PBR/rustedIron/rustediron1-alt2-bl/rustediron2_normal.png");
-	unsigned int roughnessMap = loadTexture("textures/PBR/rustedIron/rustediron1-alt2-bl/rustediron2_roughness.png");
+	unsigned int rustyMetalAlbedo = loadTexture("textures/PBR/rusty-metal-bl/rusty-metal_albedo.png");
+	unsigned int rustyMetalNormalMap = loadTexture("textures/PBR/rusty-metal-bl/rusty-metal_normal-ogl.png");
+	unsigned int rustyMetalMetallicMap = loadTexture("textures/PBR/rusty-metal-bl/rusty-metal_metallic.png");
+	unsigned int rustyMetalRoughnessMap = loadTexture("textures/PBR/rusty-metal-bl/rusty-metal_roughness.png");
+	unsigned int rustyMetalAOMap = loadTexture("textures/PBR/rusty-metal-bl/rusty-metal_ao.png");
 	
+	unsigned int speckledRustAlbedo = loadTexture("textures/PBR/speckled-rust-bl/speckled-rust_albedo.png");
+	unsigned int speckledRustNormalMap = loadTexture("textures/PBR/speckled-rust-bl/speckled-rust_normal-ogl.png");
+	unsigned int speckledRustMetallicMap = loadTexture("textures/PBR/speckled-rust-bl/speckled-rust_metallic.png");
+	unsigned int speckledRustRoughnessMap = loadTexture("textures/PBR/speckled-rust-bl/speckled-rust_roughness.png");
+	unsigned int speckledRustAOMap = loadTexture("textures/PBR/speckled-rust-bl/speckled-rust_ao.png");
+
+	unsigned int lightGoldAlbedo = loadTexture("textures/PBR/light-gold-bl/lightgold_albedo.png");
+	unsigned int lightGoldNormalMap = loadTexture("textures/PBR/light-gold-bl/lightgold_normal-ogl.png");
+	unsigned int lightGoldMetallicMap = loadTexture("textures/PBR/light-gold-bl/lightgold_metallic.png");
+	unsigned int lightGoldRoughnessMap = loadTexture("textures/PBR/light-gold-bl/lightgold_roughness.png");
 
 	//convert equirectangularmap to cubeMap
 	shaderEquirectTocubeMap.use();
@@ -307,16 +318,19 @@ int main() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
+	//setting the values of the textures
 	shader.use();
-	/*shader.setInt("albedoMap", 0);
-	shader.setInt("metallicMap", 1);
-	shader.setInt("normalMap", 2);
-	shader.setInt("roughnessMap", 3);*/
 	shader.setInt("irradianceMap", 0);
 	shader.setInt("prefilterMap", 1);
 	shader.setInt("brdfLUT", 2);
-	shader.setVec3("albedo", glm::vec3(0.5f, 0.0f, 0.0f));
-	shader.setFloat("ao", 1.0f);
+	shader.setInt("albedoMap", 3);
+	shader.setInt("metallicMap", 4);
+	shader.setInt("normalMap", 5);
+	shader.setInt("roughnessMap", 6);
+	shader.setInt("aoMap", 7);
+	//shader.setVec3("albedo", glm::vec3(0.5f, 0.0f, 0.0f));
+	//shader.setFloat("ao", 1.0f);
+
 
 	glm::vec3 lightPositions[] = {
 		glm::vec3(0.0f, -10.0f, 10.0f), 
@@ -348,29 +362,82 @@ int main() {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		/*glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, albedoMap);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, metallicMap);
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, normalMap);
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, roughnessMap)*/;
+		shader.use(); 
+		// This bool uniform is to let know to the shader if we are using a texture for ao
+		// or not, if we not i set to 1.0 to not change a thing 
+		shader.setBool("aoUse", true);
+		// setting ibl textures
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceCubemap);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceCubemap);  
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, specularCubemap);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, specularCubemap);  
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+		glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);  
 
-		shader.use();
+		// rusty iron textures
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, rustyMetalAlbedo);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, rustyMetalMetallicMap);
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_2D, rustyMetalNormalMap);
+		glActiveTexture(GL_TEXTURE6);
+		glBindTexture(GL_TEXTURE_2D, rustyMetalRoughnessMap);
+		glActiveTexture(GL_TEXTURE7);
+		glBindTexture(GL_TEXTURE_2D, rustyMetalAOMap); 
+		
 		glm::mat4 view(camera.GetViewMatrix());
 		shader.setMat4("view", view);
 		shader.setVec3("camPos", camera.Position);
 
 		glm::mat4 model(1.0f);
 
-		for (int row = 0; row < nrRows; ++row) {
+		model = glm::translate(model, glm::vec3(-5.0f, 0.0f, 0.0f));
+
+		shader.setMat4("model", model);
+		shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+		renderSphere();
+
+		//speckled rust textures
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, speckledRustAlbedo);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, speckledRustMetallicMap);
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_2D, speckledRustNormalMap);
+		glActiveTexture(GL_TEXTURE6);
+		glBindTexture(GL_TEXTURE_2D, speckledRustRoughnessMap);
+		glActiveTexture(GL_TEXTURE7);
+		glBindTexture(GL_TEXTURE_2D, speckledRustAOMap);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f));
+		shader.setMat4("model", model);
+		shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+		renderSphere();
+
+		//light gold
+		shader.setBool("aoUse", false);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, lightGoldAlbedo);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, lightGoldMetallicMap);
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_2D, lightGoldNormalMap);
+		glActiveTexture(GL_TEXTURE6);
+		glBindTexture(GL_TEXTURE_2D, lightGoldRoughnessMap);
+		glActiveTexture(GL_TEXTURE7);
+		glBindTexture(GL_TEXTURE_2D, speckledRustAOMap);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(5.0f, 0.0f, 0.0f));
+		shader.setMat4("model", model);
+		shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+		renderSphere();
+
+
+		//scene with differents spheres with differents metallic values and roughnes values
+		/*for (int row = 0; row < nrRows; ++row) {
 			shader.setFloat("metallic", (float)row / (float)nrRows);
 			for (int col = 0; col < nrColumns; ++col) {
 				
@@ -385,7 +452,7 @@ int main() {
 				shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
 				renderSphere();
 			}
-		}
+		}*/
 		//commented just for use of the indirect light from the hdr texture
 		/*shaderLight.use();
 		shaderLight.setMat4("projection", projection);
