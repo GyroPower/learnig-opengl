@@ -1,5 +1,5 @@
 #pragma once
-#include <glad/glad.h>
+#include <glad/include/glad/gl.h>
 
 #include <string>
 #include <fstream>
