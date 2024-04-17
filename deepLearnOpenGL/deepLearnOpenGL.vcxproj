@@ -531,6 +531,7 @@
     <ClInclude Include="LearnOpenGLSource\SourceCodeMesh.h" />
     <ClInclude Include="LearnOpenGLSource\SourceCodeModel.h" />
     <ClInclude Include="LearnOpenGLSource\SourceCodeShader.h" />
+    <ClInclude Include="ownHeaderFiles\CharacterLoad\character.h" />
     <ClInclude Include="ownHeaderFiles\mesh\Mesh.h" />
     <ClInclude Include="ownHeaderFiles\model\Model.h" />
     <ClInclude Include="ownHeaderFiles\ShaderProgram\shaderClass.h" />
@@ -721,6 +722,8 @@
     <None Include="shaders\depthMapCalc\shaderSimpleQuad\shaderVertex.glsl" />
     <None Include="shaders\depthMapCalc\shaderVertex.glsl" />
     <None Include="shaders\DepthTest\shaderVertex.glsl" />
+    <None Include="shaders\Fonts\Font.fs" />
+    <None Include="shaders\Fonts\Font.vs" />
     <None Include="shaders\Framebuffers\shaderFragment.glsl" />
     <None Include="shaders\Framebuffers\shaderVertex.glsl" />
     <None Include="shaders\GeometryShader\shaderFragment.glsl" />

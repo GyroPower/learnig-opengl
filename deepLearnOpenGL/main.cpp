@@ -3,6 +3,7 @@
 #include<map>
 #include<cstdlib>
 #include<random>
+#include<utility>
 #include<glad/include/glad/gl.h> 
 #include<GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -12,6 +13,7 @@
 #include"OwnHeaderFiles/model/Model.h"
 #include"OwnHeaderFiles/camera/camera.h"
 #include<ft2build.h>
+#include"ownHeaderFiles/CharacterLoad/character.h"
 #include FT_FREETYPE_H 
 
 
@@ -112,6 +114,9 @@ void renderPlaneScene(const Shader& shader, unsigned int textureID);
 void colorsAttachment();
 void setSSAOcolorBuffer(unsigned int ssaoColorBuffer);
 void renderSphere();
+void renderText(
+	Shader& shader, std::string text, float x, float y, float scale, glm::vec3 color,
+	unsigned int VAO, unsigned int VBO, std::map<char, Character> Characters);
 float lerp(float a, float b, float f);
 unsigned int genCubeMap(unsigned int internalformat = GL_RGB16F, unsigned int scr_width = 512,
 	unsigned int scr_height = 512);
@@ -172,14 +177,15 @@ Camera camera(glm::vec3(0.0f, 0.0f, 9.0f));
 //unsigned int planeVAO, planeVBO;
 
 int main() {
+
 	//Initiate glfw to use a window to set opengl 
 
-	
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_SAMPLES, 4);
+	//setting to glfw to enable a debug context
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 
 #ifdef __APPLE__
@@ -206,6 +212,8 @@ int main() {
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
+	//The glad files were changed, using a file where are more functions and enums 
+	//available 
 	if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress))
 	{
 		std::cout << "Failed to initialize GLAD" << std::endl;
@@ -228,7 +236,11 @@ int main() {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	glDepthFunc(GL_LEQUAL);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
+	Shader shaderRenderText("shaders/Fonts/Font.vs", "shaders/Fonts/Font.fs");
+
 	FT_Library ft;
 
 	if (FT_Init_FreeType(&ft)) {
@@ -243,211 +255,84 @@ int main() {
 		return -1;
 	}
 
-	Shader shader("shaders/PBR/directLighting/shaderVertex.glsl",
-		"shaders/PBR/directLighting/shaderFragment.glsl");
-	Shader shaderLight("shaders/PBR/renderSphereLight/shaderVertex.glsl",
-		"shaders/PBR/renderSphereLight/shaderFragment.glsl");
-	Shader shaderEquirectTocubeMap("shaders/PBR/EquirectToCubemap/shaderVertex.glsl",
-		"shaders/PBR/EquirectToCubemap/shaderFragment.glsl");
-	Shader shaderBackgroundSkybox("shaders/PBR/shaderCubemap/shaderVertex.glsl",
-		"shaders/PBR/shaderCubemap/shaderFragment.glsl");
-	Shader shaderIrradianceMap("shaders/PBR/cubeMapToIrradiance/shaderVertex.glsl",
-		"shaders/PBR/cubeMapToIrradiance/shaderFragment.glsl");
-	Shader shaderSpecularMap("shaders/PBR/cubeMapToSpecular/shaderVertex.glsl",
-		"shaders/PBR/cubeMapToSpecular/shaderFragment.glsl");
-	Shader shaderBRDF("shaders/PBR/brdfShader/shaderVertex.glsl",
-		"shaders/PBR/brdfShader/shaderFragment.glsl");
-	Shader RenderQuad("shaders/PBR/renderQuad/shaderVertex.glsl",
-		"shaders/PBR/renderQuad/shaderFragment.glsl");
-	
-	unsigned int captureFBO = genFramebufferObject();
-	unsigned int captureRBO = genRenderBuffercubeMap();
-	
-	unsigned int envCubemap = genCubeMap();
-	unsigned int irradianceCubemap = genCubeMap(GL_RGBA16F, 32, 32);
-	//Cubemap that stores different levels of cubemaps increasing roughness levels
-	//this cubemap stores the reflection of surfaces with differents rough values
-	unsigned int specularCubemap = genCubeMapMipmap();
-	unsigned int brdfLUTTexture = genLUTTexture();
-	
-	//This mat4 is for capture a scene, a face of a scene, this gives of how the 
-	//scene is projected to the screen 
-	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
-	//This is the directions of where the view matrix is looking in the scene
-	glm::mat4 captureViews[] = {
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
-	};
+	FT_Set_Pixel_Sizes(face, 0, 48);
 
-	//the hdr texture helps for better sense of lighting and it's in a format that allows
-	//values of colors that are not clamped to 1.0 value, that's why it's called hdr
-	//texture
-	//This is considered a more precise form of ambient lighting
-	unsigned int hdrTexture = loadHDRTexture("textures/PBR/cubeMap_enviroment/christmas_photo_studio_07_4k.hdr");
-	
-	//This textures gives us the values of the surfaces to reflect better the light 
-	//and give more details to the surface
-	unsigned int rustyMetalAlbedo = loadTexture("textures/PBR/rusty-metal-bl/rusty-metal_albedo.png");
-	unsigned int rustyMetalNormalMap = loadTexture("textures/PBR/rusty-metal-bl/rusty-metal_normal-ogl.png");
-	unsigned int rustyMetalMetallicMap = loadTexture("textures/PBR/rusty-metal-bl/rusty-metal_metallic.png");
-	unsigned int rustyMetalRoughnessMap = loadTexture("textures/PBR/rusty-metal-bl/rusty-metal_roughness.png");
-	unsigned int rustyMetalAOMap = loadTexture("textures/PBR/rusty-metal-bl/rusty-metal_ao.png");
-	
-	unsigned int speckledRustAlbedo = loadTexture("textures/PBR/speckled-rust-bl/speckled-rust_albedo.png");
-	unsigned int speckledRustNormalMap = loadTexture("textures/PBR/speckled-rust-bl/speckled-rust_normal-ogl.png");
-	unsigned int speckledRustMetallicMap = loadTexture("textures/PBR/speckled-rust-bl/speckled-rust_metallic.png");
-	unsigned int speckledRustRoughnessMap = loadTexture("textures/PBR/speckled-rust-bl/speckled-rust_roughness.png");
-	unsigned int speckledRustAOMap = loadTexture("textures/PBR/speckled-rust-bl/speckled-rust_ao.png");
-
-	unsigned int lightGoldAlbedo = loadTexture("textures/PBR/light-gold-bl/lightgold_albedo.png");
-	unsigned int lightGoldNormalMap = loadTexture("textures/PBR/light-gold-bl/lightgold_normal-ogl.png");
-	unsigned int lightGoldMetallicMap = loadTexture("textures/PBR/light-gold-bl/lightgold_metallic.png");
-	unsigned int lightGoldRoughnessMap = loadTexture("textures/PBR/light-gold-bl/lightgold_roughness.png");
-
-	//convert equirectangularmap to cubeMap
-	shaderEquirectTocubeMap.use();
-	shaderEquirectTocubeMap.setInt("equirectangularMap", 0);
-	shaderEquirectTocubeMap.setMat4("projection", captureProjection);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, hdrTexture);
-
-	glViewport(0, 0, 512, 512); //this is the size of the capture dimensions
-	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-
-	for (unsigned int i = 0; i < 6; i++) {
-		//render each face of the cube map and giving the directions to see the scene
-		//and capturing the rendered scene into the cubemap
-		shaderEquirectTocubeMap.setMat4("view", captureViews[i]);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubemap, 0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		renderCube();
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
-	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-
-
-	
-	// as is not hightly detailed the texture we set the resolution to 32x32
-	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
-
-	//Now is time for the irradiance map, that gives us the global lighting ambience
-	shaderIrradianceMap.use();
-	shaderIrradianceMap.setInt("environmentMap", 0);
-	shaderIrradianceMap.setMat4("projection", captureProjection);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
-
-	
-	glViewport(0, 0, 32, 32);
-	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-
-
-	//do the irradiance calc for each face and store it in the irradiance cubemap
-	// this is the diffuse part of the ibl tecnique
-	for (unsigned int i = 0; i < 6; i++) {
-		shaderIrradianceMap.setMat4("view", captureViews[i]);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceCubemap, 0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		renderCube();
+	if (FT_Load_Char(face, 'X', FT_LOAD_RENDER)) {
+		std::cout << "ERROR::FREETYPE: Failed to load Glyph" << std::endl;
+		return -1;
 	}
 
-	// this is the specular part and reflective part of the obl tecnique
-	shaderSpecularMap.use();
-	shaderSpecularMap.setInt("enviromentMap", 0);
-	shaderSpecularMap.setMat4("projection", captureProjection);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
-	
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-	unsigned int maxMipLevels = 5;
-	// this cube map it's gonna have mip levels depending of the roughness
-	// this is for storing differents reflections depending of the roughness
-	// with less rough value a better look like a mirror surface
-	// in this cubemap we gonna store the reflective part of the specular part of ibl
-	for (unsigned int mip = 0; mip < maxMipLevels; mip++) {
-		// each mipmap levels we reduce the resolution of the reflection
-		// because more roughness less detail we need to store
-		unsigned int mipWidth = 256 * std::pow(0.5, mip);
-		unsigned int mipHeight = 256 * std::pow(0.5, mip);
+	std::map<char, Character> Characters;
 
-		glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
-		glViewport(0, 0, mipWidth, mipHeight);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-		float roughness = (float)mip / (float)(maxMipLevels - 1);
-		shaderSpecularMap.setFloat("roughness", roughness);
+	//orthogonal projection matrix, we don't need perspective unless we render 
+	//in a 3d scene and this would be easy to alocate where the origin of the text 
+	//should be
+	glm::mat4 projection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
 
-		for (unsigned int i = 0; i < 6; i++) {
-			shaderSpecularMap.setMat4("view", captureViews[i]);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, specularCubemap, mip);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			renderCube();
+	//reserve memory for the quad for render the glyph we want
+	//we said it's dinamic draw cause we are gonna change the data to allocate during 
+	//the render of text
+	unsigned int VAO, VBO;
+
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	//loading all the asci characters to store in a map with the data to calc the size of
+	//the quad and render the text
+	for (unsigned int c = 0; c < 128; c++) {
+		if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
+			std::cout << "ERROR::FREETYPE: Failed to load Glyph" << std::endl;
+			continue;
 		}
+
+		unsigned int texture;
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			GL_RED,
+			face->glyph->bitmap.width,
+			face->glyph->bitmap.rows,
+			0,
+			GL_RED,
+			GL_UNSIGNED_BYTE,
+			face->glyph->bitmap.buffer
+		);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		Character character = {
+			texture,
+			glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+			glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+			face->glyph->advance.x
+		};
+		Characters.insert(std::pair<char, Character>(c, character));
 	}
 
-
-	// this part it's for precomputate the the brdf part of the ibl of the scene
-	// this generate a texture for every combination of normal and light direction on 
-	// varying roughness values
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUTTexture, 0);
-
-	glViewport(0, 0, 512, 512);
-	shaderBRDF.use();
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	renderQuad();
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-
-	//setting the values of the textures
-	shader.use();
-	shader.setInt("irradianceMap", 0);
-	shader.setInt("prefilterMap", 1);
-	shader.setInt("brdfLUT", 2);
-	shader.setInt("albedoMap", 3);
-	shader.setInt("metallicMap", 4);
-	shader.setInt("normalMap", 5);
-	shader.setInt("roughnessMap", 6);
-	shader.setInt("aoMap", 7);
-	//shader.setVec3("albedo", glm::vec3(0.5f, 0.0f, 0.0f));
-	//shader.setFloat("ao", 1.0f);
-
-
-	glm::vec3 lightPositions[] = {
-		glm::vec3(0.0f, -10.0f, 10.0f), 
-	};
-	glm::vec3 lightColors[] = {
-		glm::vec3(300.0f),
-		
-	};
-
-	int nrRows = 7;
-	int nrColumns = 7;
-	float spacing = 2.5f;
-
-	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-	shader.use();
-	shader.setMat4("projection", projection);
-	shaderBackgroundSkybox.use();
-	shaderBackgroundSkybox.setInt("enviromentMap", 0);
-	shaderBackgroundSkybox.setMat4("projection", projection);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	
+	//clear the resources of freetype
+	FT_Done_Face(face);
+	FT_Done_FreeType(ft);
 
+
+	shaderRenderText.use();
+	shaderRenderText.setMat4("projection", projection);
+	
 	while (!glfwWindowShouldClose(window)) {
 		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
@@ -455,131 +340,11 @@ int main() {
 
 		processInput(window);
 
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClearColor(0.0f, 0.3f, 0.7f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		shader.use(); 
-		// This bool uniform is to let know to the shader if we are using a texture for ao
-		// or not, if we not i set to 1.0 to not change a thing 
-		shader.setBool("aoUse", true);
-		// setting ibl textures
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceCubemap);  
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, specularCubemap);  
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);  
-
-		// rusty iron textures
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, rustyMetalAlbedo);
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, rustyMetalMetallicMap);
-		glActiveTexture(GL_TEXTURE5);
-		glBindTexture(GL_TEXTURE_2D, rustyMetalNormalMap);
-		glActiveTexture(GL_TEXTURE6);
-		glBindTexture(GL_TEXTURE_2D, rustyMetalRoughnessMap);
-		glActiveTexture(GL_TEXTURE7);
-		glBindTexture(GL_TEXTURE_2D, rustyMetalAOMap); 
-		
-		glm::mat4 view(camera.GetViewMatrix());
-		shader.setMat4("view", view);
-		shader.setVec3("camPos", camera.Position);
-
-		glm::mat4 model(1.0f);
-
-		model = glm::translate(model, glm::vec3(-5.0f, 0.0f, 0.0f));
-
-		shader.setMat4("model", model);
-		shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
-		renderSphere();
-
-		//speckled rust textures
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, speckledRustAlbedo);
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, speckledRustMetallicMap);
-		glActiveTexture(GL_TEXTURE5);
-		glBindTexture(GL_TEXTURE_2D, speckledRustNormalMap);
-		glActiveTexture(GL_TEXTURE6);
-		glBindTexture(GL_TEXTURE_2D, speckledRustRoughnessMap);
-		glActiveTexture(GL_TEXTURE7);
-		glBindTexture(GL_TEXTURE_2D, speckledRustAOMap);
-
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f));
-		shader.setMat4("model", model);
-		shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
-		renderSphere();
-
-		//light gold
-		shader.setBool("aoUse", false);
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, lightGoldAlbedo);
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, lightGoldMetallicMap);
-		glActiveTexture(GL_TEXTURE5);
-		glBindTexture(GL_TEXTURE_2D, lightGoldNormalMap);
-		glActiveTexture(GL_TEXTURE6);
-		glBindTexture(GL_TEXTURE_2D, lightGoldRoughnessMap);
-		glActiveTexture(GL_TEXTURE7);
-		glBindTexture(GL_TEXTURE_2D, speckledRustAOMap);
-
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(5.0f, 0.0f, 0.0f));
-		shader.setMat4("model", model);
-		shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
-		renderSphere();
-
-
-		//scene with differents spheres with differents metallic values and roughnes values
-		/*for (int row = 0; row < nrRows; ++row) {
-			shader.setFloat("metallic", (float)row / (float)nrRows);
-			for (int col = 0; col < nrColumns; ++col) {
-				
-				shader.setFloat("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
-				model = glm::mat4(1.0f);
-				model = glm::translate(model, glm::vec3(
-					(col - (nrColumns / 2)) * spacing,
-					(row - (nrRows / 2)) * spacing,
-					0.0f
-				));
-				shader.setMat4("model", model);
-				shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
-				renderSphere();
-			}
-		}*/
-		//commented just for use of the indirect light from the hdr texture
-		/*shaderLight.use();
-		shaderLight.setMat4("projection", projection);
-		shaderLight.setMat4("view", camera.GetViewMatrix());
-		for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i) {
-			glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
-			newPos = lightPositions[i];
-			
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, newPos);
-			model = glm::scale(model, glm::vec3(0.5f));
-			shaderLight.use();
-			shaderLight.setMat4("model", model);
-			shaderLight.setVec3("lightColor", lightColors[i]);
-			renderSphere();
-			shader.use();
-			shader.setVec3("lightPositions[" + std::to_string(i) + "]", newPos);
-			shader.setVec3("lightColors[" + std::to_string(i) + "]", lightColors[i]);
-		}*/
-
-		shaderBackgroundSkybox.use();
-		shaderBackgroundSkybox.setMat4("view", view);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
-		renderCube();
-
-		/*RenderQuad.use();
-		RenderQuad.setInt("LUTTexture", 0);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
-		renderQuad();*/
+		renderText(shaderRenderText, "This is text rendered", 100.0f, 100.0f, 0.6f, glm::vec3(0.0f,0.5f,0.5f),
+			VAO, VBO, Characters);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -595,6 +360,54 @@ int main() {
 
 }
 
+void renderText(
+	Shader& shader, std::string text, float x, float y, float scale, glm::vec3 color,
+	unsigned int VAO, unsigned int VBO, std::map<char,Character> Characters) {
+	
+	//this function will load the texture id of the letter and the metrics to calc
+	//his size and the actual color of the text and render the letters
+	//avoiding to render a quad using blending 
+	shader.use();
+	shader.setVec3("textColor", color);
+	glActiveTexture(GL_TEXTURE0);
+	glBindVertexArray(VAO);
+
+	std::string::const_iterator c;
+
+	for (c = text.begin(); c != text.end(); c++) {
+		Character ch = Characters[*c];
+
+		float xpos = x + ch.Bearing.x * scale;
+		//here we calc the offset if a letter has pixels downwards the baseline like p,
+		//q or g
+		float ypos = y - (ch.Size.y - ch.Bearing.y) * scale;
+
+		float w = ch.Size.x * scale;
+		float h = ch.Size.y * scale;
+
+		float vertices[6][4] = {
+			{xpos,		ypos + h,	0.0f, 0.0f},
+			{xpos,		ypos,		0.0f, 1.0f},
+			{xpos + w,	ypos,		1.0f, 1.0f},
+
+			{xpos,		ypos + h,	0.0f, 0.0f},
+			{xpos + w,	ypos,		1.0f, 1.0f},
+			{xpos + w,	ypos + h,	1.0f, 0.0f}
+		};
+
+		glBindTexture(GL_TEXTURE_2D, ch.TextureID);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		x += (ch.Advance >> 6) * scale;
+	}
+
+	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
 
 unsigned int sphereVAO = 0;
 unsigned int indexCount;

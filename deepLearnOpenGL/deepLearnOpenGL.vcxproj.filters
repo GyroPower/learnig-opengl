@@ -1172,6 +1172,9 @@
     <ClInclude Include="libraries\include\KHR\khrplatform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ownHeaderFiles\CharacterLoad\character.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\Lighting\shaderVertexLighting.glsl">
@@ -1712,6 +1715,8 @@
       <Filter>Header Files</Filter>
     </None>
     <None Include="freetype.dll" />
+    <None Include="shaders\Fonts\Font.fs" />
+    <None Include="shaders\Fonts\Font.vs" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\wall.jpg">
